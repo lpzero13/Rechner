@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Berechne deine Aktienposition aus Depotwert, geplantem Risiko, Kaufkurs und Stop-Loss. Privat und direkt im Browser.">
+  <meta name="color-scheme" content="light dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+  <title>Positionsrechner · Klar kalkuliert.</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232b5948'/%3E%3Cpath d='M17 43V31m15 12V21m15 22V12' stroke='%23e7f0b6' stroke-width='6'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="src/styles.css">
+  <script defer src="src/numbers.js"></script>
+  <script defer src="src/calculations.js"></script>
+  <script defer src="src/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#portfolio">Zu den Eingaben</a>
+  <div class="page">
+    <header class="header">
+      <a href="./index.html" class="brand" aria-label="Positionsrechner Startseite"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i></span>Positionsrechner<span class="version">1.1</span></a>
+      <label class="theme-control"><span aria-hidden="true">◐</span><select id="theme-select" aria-label="Darstellung"><option value="system">System</option><option value="light">Hell</option><option value="dark">Dunkel</option></select></label>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow"><span></span> DEIN RISIKO. DEIN PLAN.</p>
+        <h1 id="page-title">Klar kalkuliert.<br><span>Bewusst positioniert.</span></h1>
+        <p class="intro-text">Wie viele Aktien passen zu deinem Risiko? Vier Angaben.<br class="desktop-break"> Eine nachvollziehbare Positionsgröße.</p>
+      </section>
+
+      <div class="calculator">
+        <section class="card input-card" aria-labelledby="input-title">
+          <div class="card-heading"><h2 id="input-title">Deine Ausgangslage</h2><span class="step">01 / EINGABEN</span></div>
+          <form id="position-form" novalidate autocomplete="off">
+            <div class="field">
+              <label for="portfolio">Aktueller Depotwert</label>
+              <div class="input-shell"><input id="portfolio" name="portfolio" type="text" inputmode="decimal" placeholder="z. B. 10.000,00" aria-describedby="portfolio-help portfolio-error" spellcheck="false" autocomplete="off"><span aria-hidden="true">€</span></div>
+              <p class="field-help" id="portfolio-help">Der gesamte Wert deines Depots in Euro.</p>
+              <p class="field-error" id="portfolio-error"></p>
+            </div>
+            <fieldset class="risk-field"><legend>Risiko pro Trade</legend>
+              <div class="risk-presets" role="group" aria-label="Risiko-Schnellwahl">
+                <button type="button" data-risk="0,5" aria-pressed="false">0,5 <span>%</span></button>
+                <button type="button" data-risk="1" aria-pressed="true">1 <span>%</span></button>
+                <button type="button" data-risk="2" aria-pressed="false">2 <span>%</span></button>
+              </div>
+              <label class="custom-label" for="risk">Oder eigener Prozentwert</label>
+              <div class="input-shell compact"><input id="risk" name="risk" type="text" inputmode="decimal" value="1" aria-describedby="risk-help risk-error" spellcheck="false" autocomplete="off"><span aria-hidden="true">%</span></div>
+              <p class="field-help" id="risk-help">Der Anteil am Depot, den du für diesen Trade riskieren möchtest.</p>
+              <p class="field-error" id="risk-error"></p>
+            </fieldset>
+            <div class="price-fields">
+              <div class="field"><label for="entry">Geplanter Kaufkurs <span class="label-detail">je Aktie</span></label><div class="input-shell"><input id="entry" name="entry" type="text" inputmode="decimal" placeholder="z. B. 50,00" aria-describedby="entry-error" spellcheck="false" autocomplete="off"><span aria-hidden="true">€</span></div><p class="field-error" id="entry-error"></p></div>
+              <div class="field"><label for="stop">Dein Stop-Loss-Kurs</label><div class="input-shell"><input id="stop" name="stop" type="text" inputmode="decimal" placeholder="z. B. 47,50" aria-describedby="stop-help stop-error" spellcheck="false" autocomplete="off"><span aria-hidden="true">€</span></div><p class="field-error" id="stop-error"></p></div>
+            </div>
+            <p class="field-help stop-help" id="stop-help">Setze deinen Stop als konkreten Kurs unterhalb des Kaufkurses.</p>
+            <fieldset class="cost-field"><legend>Orderkosten einplanen</legend>
+              <label class="custom-label" for="costProfile">Broker &amp; Kostenmodell</label>
+              <select id="costProfile" name="costProfile" aria-describedby="cost-help costProfile-error">
+                <option value="tr" selected>Trade Republic · Bestpreis</option>
+                <option value="tr-direct">Trade Republic · Direktpreis</option>
+                <option value="ing">ING · Direkt-Depot Standard</option>
+                <option value="ing-young">ING · Direkt-Depot Young</option>
+                <option value="manual">Kosten selbst eingeben</option>
+                <option value="none">Ohne Kosten · Vergleich</option>
+              </select>
+              <p class="field-help" id="cost-help">1,00 € je Kauf und Verkauf. Einzelorders, keine Sparpläne.</p>
+              <p class="field-error" id="costProfile-error"></p>
+              <div id="ing-costs" hidden>
+                <label class="custom-label" for="extraFee">Handelsplatz- / Zusatzkosten je Order</label>
+                <div class="input-shell compact"><input id="extraFee" name="extraFee" type="text" inputmode="decimal" value="0,00" aria-describedby="extraFee-help extraFee-error" autocomplete="off" spellcheck="false"><span aria-hidden="true">€</span></div>
+                <p class="field-help" id="extraFee-help">Direkthandel 0 € · Xetra z. B. 2,90 €. Annahme: gleicher Handelsplatz für Kauf und Verkauf.</p><p class="field-error" id="extraFee-error"></p>
+              </div>
+              <div id="manual-costs" class="manual-costs" hidden>
+                <div><label class="custom-label" for="buyFee">Kosten Kauf gesamt</label><div class="input-shell compact"><input id="buyFee" name="buyFee" type="text" inputmode="decimal" value="0,00" aria-describedby="buyFee-error" autocomplete="off" spellcheck="false"><span aria-hidden="true">€</span></div><p class="field-error" id="buyFee-error"></p></div>
+                <div><label class="custom-label" for="sellFee">Kosten Verkauf gesamt</label><div class="input-shell compact"><input id="sellFee" name="sellFee" type="text" inputmode="decimal" value="0,00" aria-describedby="sellFee-help sellFee-error" autocomplete="off" spellcheck="false"><span aria-hidden="true">€</span></div><p class="field-error" id="sellFee-error"></p></div>
+                <p class="field-help" id="sellFee-help">Feste Gesamtbeträge für genau einen Kauf und einen Verkauf. Derselbe Verkaufsbetrag gilt für Stop und Ziel.</p>
+              </div>
+              <details class="fee-sources"><summary>Was ist enthalten?</summary><p>Gebührenmodell für Euro-Aktienorders, geprüft am 24.10.2026. Kosten sind Schätzungen. Maßgeblich ist die Kosteninformation vor deiner Order; Aktionen und Sonderkonditionen können abweichen. Bei abweichenden Kauf-/Verkaufskosten nutze die manuelle Eingabe.</p><p>Spread und Slippage sind nicht pauschal enthalten. Trage den erwarteten Kauf-Ausführungskurs ein; ein Spread im Ausführungskurs darf nicht zusätzlich als Gebühr doppelt erfasst werden. Keine Steuern, Währungsumrechnung oder Teilausführungen.</p><p><a href="https://www.ing.de/preis-leistungsverzeichnis/" target="_blank" rel="noopener noreferrer">ING Preisverzeichnis</a> · <a href="https://traderepublic.com/de-de?openModal=pricing-scheme" target="_blank" rel="noopener noreferrer">Trade Republic Preise</a></p></details>
+            </fieldset>
+          </form>
+          <div class="privacy-note"><span aria-hidden="true">⌁</span><p>Bleibt bei dir. Alle Berechnungen laufen lokal im Browser. Deine Eingaben werden nicht gespeichert.</p></div>
+        </section>
+
+        <section class="card result-card" aria-labelledby="result-title">
+          <div class="card-heading"><h2 id="result-title">Deine Position</h2><span class="step">02 / ERGEBNIS</span></div>
+          <div class="position-hero"><p class="small-label">MAXIMALE GANZE AKTIENANZAHL</p><div class="share-count"><output id="shares">—</output><span>Aktien</span></div><p id="result-status" role="status" aria-live="polite" aria-atomic="true">Trage Depotwert, Kaufkurs und Stop-Loss ein.</p></div>
+          <div id="limit-note" class="limit-note" hidden></div>
+          <div class="primary-metrics"><div><span>Kaufbetrag inkl. Kaufkosten</span><output id="purchase">—</output></div><div><span>Stop-Verlust inkl. Kosten</span><output id="loss" class="loss">—</output></div></div>
+          <div class="allocation"><div><span>Anteil am Depot</span><output id="allocation">—</output></div><div class="allocation-track" aria-hidden="true"><div id="allocation-fill"></div></div><p>Theoretische Kapitalgrenze · keine Prüfung deiner freien Liquidität</p></div>
+          <dl class="details"><div><dt>Risikobudget</dt><dd id="budget">—</dd></div><div><dt>Kursverlust je Aktie, ohne Kosten</dt><dd id="per-share">—</dd></div><div><dt>Depotrisiko inkl. Kosten</dt><dd id="actual-risk">—</dd></div><div><dt>Stop-Abstand zum Kaufkurs</dt><dd id="stop-distance">—</dd></div></dl>
+          <div class="cost-summary"><p class="small-label">SO WIRKEN DEINE KOSTEN</p><dl class="details"><div><dt>Kaufkosten</dt><dd id="buy-cost">—</dd></div><div><dt>Verkaufskosten am Stop</dt><dd id="stop-cost">—</dd></div><div><dt>Gesamtkosten am Stop</dt><dd id="total-cost">—</dd></div><div><dt>Gewinnschwelle je Aktie</dt><dd id="break-even">—</dd></div></dl><p id="cost-effect">Kauf- und Verkaufskosten teilen sich dein Risikobudget mit dem Kursverlust.</p></div>
+          <div class="target-panel"><div class="target-heading"><h3>Wenn aus Risiko Chance wird.</h3><span class="ratio">3 : 1</span></div><p class="target-disclaimer">Orientierung, keine Prognose · vor Steuern</p><div class="target-price"><div><span>3:1-Kurs vor Kosten</span><output id="target">—</output></div><output class="target-rise" id="rise">—</output></div><div class="target-gain"><span>Gewinn nach Orderkosten</span><output id="gain">—</output></div><dl class="details target-details"><div><dt>Verkaufskosten an diesem Ziel</dt><dd id="target-cost">—</dd></div><div><dt>Chance / Risiko nach Kosten</dt><dd id="net-ratio">—</dd></div><div class="net-target-row"><dt>Kurs für mindestens 3:1 nach Kosten</dt><dd id="net-target">—</dd></div></dl><p class="field-help">Der Kurs für 3:1 nach Kosten berücksichtigt auch die Kaufkosten und die am höheren Verkaufskurs anfallenden Gebühren.</p></div>
+        </section>
+      </div>
+
+      <section class="explanation" aria-labelledby="explanation-title"><span class="explanation-icon" aria-hidden="true">i</span><div><h2 id="explanation-title">Ein Plan für deine Positionsgröße.</h2><p id="explanation-text">Je größer der Abstand zwischen Kaufkurs und Stop-Loss, desto kleiner die Position bei gleichem Risikobudget. Wir runden auf ganze Aktien ab und begrenzen den Kaufbetrag auf deinen Depotwert.</p></div></section>
+      <aside class="risk-notice" aria-label="Risiko- und Währungshinweise"><p><strong>Geplant heißt nicht garantiert.</strong> Das gewählte Risiko ist kein garantiertes Verlustmaximum. Kurssprünge, abweichende Ausführungspreise und Gebühren können den tatsächlichen Verlust erhöhen.</p><p><strong>Nur Euro.</strong> Rechne Kurse in anderen Währungen, etwa US-Dollar, vorher in Euro um. Depotwert, Kaufkurs und Stop-Loss müssen dieselbe Währung verwenden.</p></aside>
+    </main>
+    <footer><span>Weniger raten. Bewusster planen.</span><span>Ohne Konto. Ohne Tracking. Ohne Speicherung.</span></footer>
+    <noscript><p class="noscript">Bitte aktiviere JavaScript, um den Positionsrechner zu verwenden.</p></noscript>
+  </div>
+</body>
+</html>

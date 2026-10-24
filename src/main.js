@@ -1,0 +1,87 @@
+(function () {
+  'use strict';
+  const { evaluate } = globalThis.PositionCalculator;
+  const { parseDecimal, formatMoney, formatPercent, formatInteger, percentHundredths, formatRatio } = globalThis.PositionNumbers;
+  const byId = id => document.getElementById(id);
+  const fields = ['portfolio', 'risk', 'entry', 'stop', 'costProfile', 'extraFee', 'buyFee', 'sellFee'];
+  const outputIds = ['shares', 'purchase', 'loss', 'allocation', 'budget', 'per-share', 'actual-risk', 'stop-distance', 'target', 'rise', 'gain', 'buy-cost', 'stop-cost', 'total-cost', 'break-even', 'target-cost', 'net-ratio', 'net-target'];
+  const defaultExplanation = byId('explanation-text').textContent;
+  const themeSelect = byId('theme-select');
+  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+  function updateTheme() {
+    const choice = themeSelect.value;
+    const dark = choice === 'dark' || (choice === 'system' && systemTheme.matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  }
+  updateTheme();
+  themeSelect.addEventListener('change', updateTheme);
+  systemTheme.addEventListener('change', updateTheme);
+
+  const costHints = {
+    none: 'Vergleichsrechnung ohne Orderkosten. Wähle deinen Broker für eine Rechnung mit Gebühren.',
+    tr: '1,00 € je Kauf und Verkauf. Bestpreis, Einzelorders, keine Sparpläne.',
+    'tr-direct': '2,00 € je Kauf und Verkauf: 1 € Abwicklung + 1 € Handelsplatzgebühr. Nur Euro-Orders.',
+    ing: 'Je Order 4,90 € + 0,25 % vom jeweiligen Kurswert, maximal 69,90 €, zuzüglich Zusatzkosten unten.',
+    'ing-young': '1,90 € je Order zuzüglich Zusatzkosten unten. Nur bei gültigen Young-Konditionen.',
+    manual: 'Trage die erwarteten Gesamtkosten je Order aus der Kosteninformation deines Brokers ein.',
+  };
+
+  function render() {
+    const raw = Object.fromEntries(fields.map(name => [name, byId(name).value]));
+    byId('ing-costs').hidden = !['ing', 'ing-young'].includes(raw.costProfile);
+    byId('manual-costs').hidden = raw.costProfile !== 'manual';
+    byId('cost-help').textContent = costHints[raw.costProfile] || '';
+    const evaluation = evaluate(raw);
+    for (const name of fields) {
+      byId(name + '-error').textContent = evaluation.errors[name] || '';
+      byId(name).setAttribute('aria-invalid', String(Boolean(evaluation.errors[name])));
+    }
+    const risk = parseDecimal(raw.risk);
+    for (const button of document.querySelectorAll('[data-risk]')) {
+      const preset = parseDecimal(button.dataset.risk);
+      button.setAttribute('aria-pressed', String(risk.status === 'valid' && risk.numerator * preset.scale === preset.numerator * risk.scale));
+    }
+    byId('limit-note').hidden = true;
+    if (evaluation.status !== 'valid') {
+      for (const id of outputIds) byId(id).textContent = '—';
+      byId('allocation-fill').style.width = '0%';
+      byId('result-status').textContent = evaluation.status === 'invalid' ? 'Bitte prüfe die markierten Eingaben.' : 'Vervollständige deine Eingaben und das gewählte Kostenmodell.';
+      byId('explanation-text').textContent = defaultExplanation;
+      byId('cost-effect').textContent = 'Kauf- und Verkaufskosten teilen sich dein Risikobudget mit dem Kursverlust.';
+      byId('gain').classList.remove('negative');
+      return;
+    }
+    const r = evaluation.result;
+    const text = {
+      shares: formatInteger(r.shares), purchase: formatMoney(r.purchaseCents), loss: formatMoney(r.lossCents),
+      allocation: formatPercent(r.purchaseCents, r.portfolioCents), budget: formatMoney(r.budgetCents),
+      'per-share': formatMoney(r.lossPerShareCents), 'actual-risk': formatPercent(r.lossCents, r.portfolioCents),
+      'stop-distance': formatPercent(r.lossPerShareCents, r.entryCents), target: formatMoney(r.targetCents),
+      rise: formatPercent(3n * r.lossPerShareCents, r.entryCents, true), gain: formatMoney(r.gainCents, true),
+      'buy-cost': formatMoney(r.buyFeeCents), 'stop-cost': formatMoney(r.stopFeeCents),
+      'total-cost': formatMoney(r.stopCostsCents), 'break-even': r.breakEvenCents === null ? '—' : formatMoney(r.breakEvenCents),
+      'target-cost': formatMoney(r.targetFeeCents), 'net-ratio': formatRatio(r.gainCents, r.lossCents),
+      'net-target': r.netTargetCents === null ? '—' : formatMoney(r.netTargetCents),
+    };
+    for (const [id, value] of Object.entries(text)) byId(id).textContent = value;
+    byId('gain').classList.toggle('negative', r.gainCents < 0n);
+    const fewerShares = r.sharesWithoutCosts - r.shares;
+    byId('cost-effect').textContent = r.shares === 0n ? `Ohne Kosten wären ${formatInteger(r.sharesWithoutCosts)} Aktien möglich. Ohne Kauf fallen in diesem Modell keine Orderkosten an.` : `${formatMoney(r.stopCostsCents)} deines Risikobudgets entfallen auf Kauf und Verkauf am Stop. ${fewerShares > 0n ? `Dadurch ${formatInteger(fewerShares)} ${fewerShares === 1n ? 'Aktie' : 'Aktien'} weniger als ohne Kosten.` : 'Die ganze Aktienanzahl bleibt gegenüber der Rechnung ohne Kosten gleich.'}`;
+    byId('allocation-fill').style.width = (Number(percentHundredths(r.purchaseCents, r.portfolioCents)) / 100) + '%';
+    byId('result-status').textContent = r.shares === 0n ? 'Mit diesen Angaben ist keine ganze Aktie möglich.' : `${formatInteger(r.shares)} ${r.shares === 1n ? 'ganze Aktie' : 'ganze Aktien'} · auf Basis deines geplanten Risikos`;
+    const notes = [];
+    if (r.riskShares === 0n) notes.push('Dein Risikobudget reicht nicht für den Kursverlust einer ganzen Aktie einschließlich Kauf- und Verkaufskosten.');
+    if (r.capitalShares === 0n) notes.push('Eine Aktie einschließlich Kaufkosten kostet mehr als dein gesamter Depotwert.');
+    if (r.capitalLimited) notes.push('Die Depotwertgrenze begrenzt deine Aktienanzahl. Dein Risikobudget würde mehr Aktien erlauben. Die tatsächlich verfügbare Liquidität wird nicht geprüft.');
+    if (notes.length) { byId('limit-note').textContent = notes.join(' '); byId('limit-note').hidden = false; }
+    byId('explanation-text').textContent = `Bei einem Kauf zu ${formatMoney(r.entryCents)} und einem Stop bei ${formatMoney(r.stopCents)} planst du ${formatMoney(r.lossPerShareCents)} Kursverlust je Aktie. Mit ${formatInteger(r.shares)} ${r.shares === 1n ? 'Aktie' : 'Aktien'} ergibt das ${formatMoney(r.grossLossCents)} Kursverlust plus ${formatMoney(r.stopCostsCents)} Orderkosten: insgesamt ${formatMoney(r.lossCents)} oder ${formatPercent(r.lossCents, r.portfolioCents)} deines Depots. Gebühren senken den Nettogewinn; der Kurs für 3:1 nach Kosten liegt deshalb meist höher.`;
+  }
+
+  byId('position-form').addEventListener('submit', event => event.preventDefault());
+  byId('position-form').addEventListener('input', render);
+  byId('position-form').addEventListener('change', render);
+  for (const button of document.querySelectorAll('[data-risk]')) button.addEventListener('click', () => { byId('risk').value = button.dataset.risk; render(); });
+  // Clear values also on history restoration; never restore financial input.
+  window.addEventListener('pageshow', () => { byId('position-form').reset(); render(); });
+  render();
+})();

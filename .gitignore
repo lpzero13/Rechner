@@ -1,0 +1,16 @@
+# Local settings and generated artifacts never belong in the repository.
+.env
+.env.*
+*.local.json
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+artifacts/
+logs/
+data/
+*.log
+*.sqlite*
+*.db
+.DS_Store
+Thumbs.db
