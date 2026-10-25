@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { evaluate, calculatePosition, orderFee, normalizeCosts, calculateSaleScenario, evaluateSaleScenario } = require('../src/calculations.js');
+const { evaluate, calculatePosition, orderFee, normalizeCosts, calculateSaleScenario, evaluateSaleScenario, evaluateHoldingPeriod } = require('../src/calculations.js');
 const { parseMoney, parseDecimal, formatMoney, formatPercent, formatRatio, formatSignedPercent } = require('../src/numbers.js');
 const base = { portfolio: '10.000,00', risk: '1', entry: '50,00', stop: '47,50' };
 const result = changes => {
@@ -359,4 +359,81 @@ test('Schritt 3 verändert weder Aktienzahl noch das Positionsobjekt', () => {
   assert.equal(low.shares, 39n);
   assert.equal(position.gainCents, 29050n);
   assert.equal(position.targetCents, 5750n);
+});
+
+test('Zeitraum: 388 Euro in 14 Kalendertagen, Tagesdurchschnitt centgenau', () => {
+  const p = evaluateHoldingPeriod('2026-10-01', '2026-10-15', 38800n);
+  assert.equal(p.status, 'valid');
+  assert.equal(p.days, 14);
+  assert.equal(p.dailyAverageCents, 2771n);
+  assert.equal(p.buyDate, '2026-10-01');
+  assert.equal(p.saleDate, '2026-10-15');
+});
+test('Zeitraum: gleicher Tag ergibt null Tage und keinen Tagesdurchschnitt', () => {
+  const p = evaluateHoldingPeriod('2026-10-25', '2026-10-25', 38800n);
+  assert.equal(p.status, 'valid');
+  assert.equal(p.days, 0);
+  assert.equal(p.dailyAverageCents, null);
+});
+test('Zeitraum: Wochenenden zählen als Kalendertage', () => {
+  assert.equal(evaluateHoldingPeriod('2026-10-23', '2026-10-26').days, 3);
+});
+test('Zeitraum: Sommerzeitwechsel beeinflussen die Tageszahl nicht', () => {
+  assert.equal(evaluateHoldingPeriod('2026-03-28', '2026-03-30').days, 2);
+  assert.equal(evaluateHoldingPeriod('2026-10-24', '2026-10-26').days, 2);
+});
+test('Zeitraum: Schaltjahre, Jahreswechsel und frühe Jahre', () => {
+  assert.equal(evaluateHoldingPeriod('2024-02-28', '2024-03-01').days, 2);
+  assert.equal(evaluateHoldingPeriod('2000-02-28', '2000-03-01').days, 2);
+  assert.equal(evaluateHoldingPeriod('1900-02-28', '1900-03-01').days, 1);
+  assert.equal(evaluateHoldingPeriod('2026-12-31', '2027-01-01').days, 1);
+  assert.equal(evaluateHoldingPeriod('0099-12-31', '0100-01-01').days, 1);
+  assert.equal(evaluateHoldingPeriod('0001-01-01', '9999-12-31').days, 3652058);
+});
+test('Zeitraum: ein Verkauf vor dem Kauf erhält einen zugeordneten Fehler', () => {
+  const p = evaluateHoldingPeriod('2026-10-15', '2026-10-01', 38800n);
+  assert.equal(p.status, 'invalid');
+  assert.match(p.errors.saleDate, /nicht vor/);
+  assert.equal(p.days, undefined);
+  assert.equal(p.dailyAverageCents, undefined);
+});
+test('Zeitraum: leere und einzelne Angaben sind optional und unvollständig', () => {
+  assert.equal(evaluateHoldingPeriod('', '').status, 'empty');
+  assert.equal(evaluateHoldingPeriod(undefined, undefined).status, 'empty');
+  assert.equal(evaluateHoldingPeriod('2026-10-01', '').status, 'incomplete');
+  assert.equal(evaluateHoldingPeriod('', '2026-10-15').status, 'incomplete');
+});
+test('Zeitraum: unmögliche und fremdformatierte Daten werden nicht normalisiert', () => {
+  for (const date of ['2026-02-29', '1900-02-29', '2026-04-31', '2026-13-01', '2026-00-01', '2026-01-00', '0000-01-01', '10000-01-01', '2026-1-1', '01.10.2026', '2026-10-01T12:00:00Z', 'invalid']) {
+    const p = evaluateHoldingPeriod(date, '2026-10-15');
+    assert.equal(p.status, 'invalid', date);
+    assert.ok(p.errors.buyDate, date);
+  }
+  assert.ok(evaluateHoldingPeriod('2026-10-01', '2026-02-30').errors.saleDate);
+});
+test('Zeitraum: negative Ergebnisse und Centhälften runden symmetrisch', () => {
+  assert.equal(evaluateHoldingPeriod('2026-10-01', '2026-10-15', -19700n).dailyAverageCents, -1407n);
+  assert.equal(evaluateHoldingPeriod('2026-10-01', '2026-10-03', 1n).dailyAverageCents, 1n);
+  assert.equal(evaluateHoldingPeriod('2026-10-01', '2026-10-03', -1n).dailyAverageCents, -1n);
+  assert.equal(evaluateHoldingPeriod('2026-10-01', '2026-10-04', 1n).dailyAverageCents, 0n);
+  assert.equal(evaluateHoldingPeriod('2026-10-01', '2026-10-15', 0n).dailyAverageCents, 0n);
+});
+test('Zeitraum: Dauer auch ohne Kursszenario, Durchschnitt erst mit Ergebnis', () => {
+  const p = evaluateHoldingPeriod('2026-10-01', '2026-10-15');
+  assert.equal(p.days, 14);
+  assert.equal(p.dailyAverageCents, null);
+  assert.throws(() => evaluateHoldingPeriod('2026-10-01', '2026-10-15', 38800), RangeError);
+});
+test('Zeitraum: große fiktive Ergebnisse bleiben auch im Durchschnitt exakt', () => {
+  const p = evaluateHoldingPeriod('2026-10-01', '2026-10-03', 900719925474099302n);
+  assert.equal(p.dailyAverageCents, 450359962737049651n);
+});
+test('Zeitraum: Gewinn und Aktienzahl bleiben von den Daten unabhängig', () => {
+  const position = result({ costProfile: 'tr' });
+  const scenario = calculateSaleScenario(position, 6000n);
+  for (const dates of [['', ''], ['2026-10-01', '2026-10-15'], ['2026-10-15', '2026-10-01']]) {
+    evaluateHoldingPeriod(...dates, scenario.netGainCents);
+    assert.equal(position.shares, 39n);
+    assert.equal(scenario.netGainCents, 38800n);
+  }
 });

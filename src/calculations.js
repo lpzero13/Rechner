@@ -133,7 +133,42 @@
     return { status: 'valid', result: calculateSaleScenario(position, price.cents) };
   }
 
-  const api = { validateInputs, calculatePosition, evaluate, orderFee, normalizeCosts, calculateSaleScenario, evaluateSaleScenario };
+  function parseCalendarDate(raw) {
+    const value = String(raw ?? '').trim();
+    if (!value) return { status: 'empty' };
+    const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!parts) return { status: 'invalid' };
+    const [, year, month, day] = parts.map(Number);
+    if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) return { status: 'invalid' };
+    // Use UTC calendar days. Local DST must never change a holding period.
+    const date = new Date(0);
+    date.setUTCFullYear(year, month - 1, day);
+    date.setUTCHours(0, 0, 0, 0);
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return { status: 'invalid' };
+    return { status: 'valid', value, dayNumber: date.getTime() / 86400000 };
+  }
+
+  function evaluateHoldingPeriod(rawBuyDate, rawSaleDate, netGainCents = null) {
+    if (netGainCents !== null && typeof netGainCents !== 'bigint') throw new RangeError('Ungültiges Szenarioergebnis');
+    const buy = parseCalendarDate(rawBuyDate);
+    const sale = parseCalendarDate(rawSaleDate);
+    const errors = {};
+    if (buy.status === 'invalid') errors.buyDate = 'Bitte ein gültiges Kaufdatum eingeben.';
+    if (sale.status === 'invalid') errors.saleDate = 'Bitte ein gültiges Verkaufsdatum eingeben.';
+    if (buy.status === 'valid' && sale.status === 'valid' && sale.dayNumber < buy.dayNumber) errors.saleDate = 'Das Verkaufsdatum darf nicht vor dem Kaufdatum liegen.';
+    if (Object.keys(errors).length) return { status: 'invalid', errors };
+    if (buy.status === 'empty' || sale.status === 'empty') return { status: buy.status === 'empty' && sale.status === 'empty' ? 'empty' : 'incomplete', errors };
+    const days = sale.dayNumber - buy.dayNumber;
+    let dailyAverageCents = null;
+    if (days > 0 && netGainCents !== null) {
+      const absolute = netGainCents < 0n ? -netGainCents : netGainCents;
+      const rounded = (absolute + BigInt(days) / 2n) / BigInt(days);
+      dailyAverageCents = netGainCents < 0n ? -rounded : rounded;
+    }
+    return { status: 'valid', errors, days, buyDate: buy.value, saleDate: sale.value, dailyAverageCents };
+  }
+
+  const api = { validateInputs, calculatePosition, evaluate, orderFee, normalizeCosts, calculateSaleScenario, evaluateSaleScenario, evaluateHoldingPeriod };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PositionCalculator = api;
 })(typeof globalThis === 'object' ? globalThis : this);

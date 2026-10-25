@@ -1,4 +1,4 @@
-# Aktien-Positionsrechner 1.2
+# Aktien-Positionsrechner 1.3
 
 Eigenständige deutsche Web-App aus HTML, CSS und Vanilla JavaScript. Keine Installation, kein Build, keine Runtime-Abhängigkeiten und kein Backend.
 
@@ -86,6 +86,16 @@ Der Verkaufskurs muss größer als null sein und darf maximal zwei Nachkommastel
 
 Die Rechnung ist eine reine Kursannahme vor Steuern, kein realisierter Gewinn und keine Prognose. Sie setzt voraus, dass alle Aktien bis zum angenommenen Verkauf gehalten werden. Insbesondere wird kein zwischenzeitlicher Kursverlauf mit möglicher Stop-Ausführung simuliert. Bestehende Hinweise zu Spreads, Ausführungsabweichungen und Euro-Währung gelten weiter.
 
+## Optionaler Zeitraum in Schritt 3 ab Version 1.3
+
+Ein **Kaufdatum** und ein **Verkaufsdatum** ordnen das fiktive Ergebnis einer Haltedauer zu. Beide Felder starten leer und sind optional: Die Kurs- und Kostenrechnung bleibt unabhängig von fehlenden oder fehlerhaften Daten verfügbar. Bei einem gültigen Zeitraum wird beispielsweise **„388,00 € nach Orderkosten in 14 Kalendertagen (01.10.2026 – 15.10.2026)“** angezeigt.
+
+Die Haltedauer ist die Differenz zwischen den beiden Kalenderdaten, einschließlich Wochenenden und Feiertagen. Kauf und Verkauf am selben Tag bedeuten 0 Tage. UTC-basierte Kalenderarithmetik verhindert falsche Tageszahlen an Sommerzeitwechseln; Schaltjahre und ungültige Daten werden ausdrücklich geprüft. Ein Verkaufsdatum vor dem Kaufdatum zeigt einen Fehler direkt am Feld und keine veraltete Haltedauer.
+
+Zusätzlich erscheint das **Ergebnis nach Kosten je Kalendertag, Ø**: fiktiver Nettogewinn oder -verlust geteilt durch die Haltedauer, auf Cent gerundet. Beispiel: 388 € / 14 Tage = 27,71 € pro Kalendertag. Bei 0 Tagen oder fehlendem Kursszenario gibt es keinen Tagesdurchschnitt. Dies ist nur eine rechnerische Verteilung des Gesamtergebnisses, keine Aussage über tatsächliche tägliche Gewinne. Die bisherige Prozent-Rendite gilt für die gesamte Position; es findet keine Hochrechnung auf Jahresrenditen statt.
+
+Die Datumseingaben verändern weder Aktienzahl noch Gebührenmodell, werden nicht gespeichert und beim Neuladen oder Wiederherstellen aus dem Verlauf zusammen mit dem Verkaufskurs zurückgesetzt.
+
 ## Tests
 
 Aus dem Repositoryordner:
@@ -112,3 +122,8 @@ Tests für sämtliche Beispielwerte, Presets, freien Risikowert, Stop-Abstände,
 - 61 automatisierte Tests bestanden. Neue Prüfungen umfassen freie Verkaufskurse, Gewinn und Verlust, identischen Kauf-/Verkaufskurs, alle Kostenmodelle, Gebühren genau einmal, ING-Provisionsdeckel, große centgenaue Beträge, Nullpositionen, optionale Feldvalidierung und unveränderte Positionsgröße. Szenarioergebnisse stimmen am Stop, am bestehenden 3:1-Ziel, an der Gewinnschwelle und am Ziel nach Kosten mit Schritt 2 überein.
 - Browserprüfung des TR-/ING-Beispiels, Verlustrechnung, ungültigem Verkaufskurs sowie dem Entfernen veralteter Ergebnisse bei leerer Ausgangslage oder null Aktien.
 - Schritt 3 auf Desktop und bei 320 Pixeln Breite in Hell und Dunkel visuell geprüft, ohne horizontalen Überlauf. Nach dem Neuladen ist auch der Szenariokurs wieder leer; keine JavaScript-Konsolenfehler.
+
+## Ergänzende Abnahme der Version 1.3 am 25.10.2026
+
+- 73 automatisierte Tests bestanden. Zusätzliche Prüfungen für 14-Tage-Beispiel, 0 Tage, Wochenenden, Sommer-/Winterzeitwechsel, gregorianische Schaltjahre, Jahreswechsel, frühe Jahre, ungültige oder unvollständige Daten, umgekehrte Zeiträume, positive/negative Cent-Rundung und große Beträge. Zeitraum und Kursergebnis bleiben unabhängig.
+- Im Browser 14-Tage-Beispiel, Verlust, gleicher Tag, fehlendes Datum und umgekehrte Reihenfolge geprüft. Datumsfelder und Ergebnisse auf Desktop und bei 320 Pixeln in Hell/Dunkel ohne horizontalen Überlauf kontrolliert. Neuladen leert beide Daten und den Verkaufskurs; keine JavaScript-Konsolenfehler.

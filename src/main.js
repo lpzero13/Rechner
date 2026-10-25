@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const { evaluate, evaluateSaleScenario } = globalThis.PositionCalculator;
+  const { evaluate, evaluateSaleScenario, evaluateHoldingPeriod } = globalThis.PositionCalculator;
   const { parseDecimal, formatMoney, formatPercent, formatInteger, percentHundredths, formatRatio, formatSignedPercent } = globalThis.PositionNumbers;
   const byId = id => document.getElementById(id);
   const fields = ['portfolio', 'risk', 'entry', 'stop', 'costProfile', 'extraFee', 'buyFee', 'sellFee'];
@@ -26,8 +26,33 @@
     manual: 'Trage die erwarteten Gesamtkosten je Order aus der Kosteninformation deines Brokers ein.',
   };
 
+  function renderPeriod(scenario) {
+    let period = evaluateHoldingPeriod(byId('buyDate').value, byId('saleDate').value, scenario?.netGainCents ?? null);
+    for (const name of ['buyDate', 'saleDate']) {
+      const validity = byId(name).validity;
+      if (validity.badInput || validity.rangeOverflow || validity.rangeUnderflow) period = { status: 'invalid', errors: { ...period.errors, [name]: 'Bitte ein vollständiges, gültiges Datum eingeben.' } };
+    }
+    for (const name of ['buyDate', 'saleDate']) {
+      byId(name + '-error').textContent = period.errors[name] || '';
+      byId(name).setAttribute('aria-invalid', String(Boolean(period.errors[name])));
+    }
+    byId('scenario-days').textContent = '—';
+    byId('scenario-daily-average').textContent = '—';
+    if (period.status !== 'valid') {
+      byId('period-summary').textContent = period.status === 'invalid' ? 'Bitte prüfe den Zeitraum. Das fiktive Kursergebnis bleibt davon unabhängig.' : period.status === 'incomplete' ? 'Ergänze das zweite Datum, um die Haltedauer zu sehen.' : 'Ergänze optional Kauf- und Verkaufsdatum für die Haltedauer.';
+      return;
+    }
+    const formatDate = value => value.split('-').reverse().join('.');
+    const days = `${formatInteger(period.days)} ${period.days === 1 ? 'Kalendertag' : 'Kalendertage'}`;
+    const dates = period.days === 0 ? formatDate(period.buyDate) : `${formatDate(period.buyDate)} – ${formatDate(period.saleDate)}`;
+    byId('scenario-days').textContent = days;
+    if (period.dailyAverageCents !== null) byId('scenario-daily-average').textContent = formatMoney(period.dailyAverageCents, true);
+    byId('period-summary').textContent = scenario ? `${formatMoney(scenario.netGainCents, true)} nach Orderkosten ${period.days === 0 ? 'am selben Tag' : 'in ' + days.replace(/Kalendertage$/, 'Kalendertagen')} (${dates}).${period.days === 0 ? ' Kein Tagesdurchschnitt bei 0 Tagen.' : ''}` : `${days} Haltedauer (${dates}). Für ein Ergebnis in diesem Zeitraum vervollständige dein Kursszenario.`;
+  }
+
   function renderScenario(position) {
     const scenario = evaluateSaleScenario(byId('salePrice').value, position);
+    renderPeriod(scenario.status === 'valid' ? scenario.result : null);
     const outputs = ['scenario-net', 'scenario-sale-value', 'scenario-gross', 'scenario-buy-fee', 'scenario-sell-fee', 'scenario-total-fees', 'scenario-return', 'scenario-portfolio-return'];
     byId('salePrice-error').textContent = scenario.message || '';
     byId('salePrice').setAttribute('aria-invalid', String(scenario.status === 'invalid'));
@@ -115,6 +140,7 @@
   byId('position-form').addEventListener('change', render);
   byId('scenario-form').addEventListener('submit', event => event.preventDefault());
   byId('scenario-form').addEventListener('input', render);
+  byId('scenario-form').addEventListener('change', render);
   for (const button of document.querySelectorAll('[data-risk]')) button.addEventListener('click', () => { byId('risk').value = button.dataset.risk; render(); });
   // Clear values also on history restoration; never restore financial input.
   window.addEventListener('pageshow', () => { byId('position-form').reset(); byId('scenario-form').reset(); render(); });
