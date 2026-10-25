@@ -1,8 +1,8 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { evaluate, calculatePosition, orderFee, normalizeCosts, calculateSaleScenario, evaluateSaleScenario, evaluateHoldingPeriod } = require('../src/calculations.js');
-const { parseMoney, parseDecimal, formatMoney, formatPercent, formatRatio, formatSignedPercent } = require('../src/numbers.js');
+const { evaluate, calculatePosition, orderFee, normalizeCosts, calculateSaleScenario, evaluateSaleScenario, evaluateHoldingPeriod, formatDateInput } = require('../src/calculations.js');
+const { parseMoney, parseDecimal, formatMoney, formatMoneyInput, formatPercent, formatRatio, formatSignedPercent } = require('../src/numbers.js');
 const base = { portfolio: '10.000,00', risk: '1', entry: '50,00', stop: '47,50' };
 const result = changes => {
   const evaluation = evaluate({ ...base, ...changes });
@@ -404,7 +404,7 @@ test('Zeitraum: leere und einzelne Angaben sind optional und unvollständig', ()
   assert.equal(evaluateHoldingPeriod('', '2026-10-15').status, 'incomplete');
 });
 test('Zeitraum: unmögliche und fremdformatierte Daten werden nicht normalisiert', () => {
-  for (const date of ['2026-02-29', '1900-02-29', '2026-04-31', '2026-13-01', '2026-00-01', '2026-01-00', '0000-01-01', '10000-01-01', '2026-1-1', '01.10.2026', '2026-10-01T12:00:00Z', 'invalid']) {
+  for (const date of ['2026-02-29', '1900-02-29', '2026-04-31', '2026-13-01', '2026-00-01', '2026-01-00', '0000-01-01', '10000-01-01', '2026-1-1', '2026-10-01T12:00:00Z', 'invalid']) {
     const p = evaluateHoldingPeriod(date, '2026-10-15');
     assert.equal(p.status, 'invalid', date);
     assert.ok(p.errors.buyDate, date);
@@ -436,4 +436,49 @@ test('Zeitraum: Gewinn und Aktienzahl bleiben von den Daten unabhängig', () => 
     assert.equal(position.shares, 39n);
     assert.equal(scenario.netGainCents, 38800n);
   }
+});
+
+test('Depotwert: deutsche Tausenderpunkte und genau zwei Centstellen', () => {
+  for (const [raw, expected] of [['10000', '10.000,00'], ['1234567,89', '1.234.567,89'], ['10000.5', '10.000,50'], ['10.000,50', '10.000,50'], [' 10000 ', '10.000,00']]) {
+    assert.equal(formatMoneyInput(raw), expected);
+    assert.equal(parseMoney(raw).cents, parseMoney(expected).cents);
+  }
+});
+test('Depotwert: Centgenauigkeit bleibt oberhalb der Number-Grenze erhalten', () => {
+  assert.equal(formatMoneyInput('9007199254740993,01'), '9.007.199.254.740.993,01');
+  assert.equal(parseMoney(formatMoneyInput('9'.repeat(120))).status, 'valid');
+});
+test('Depotwert: ungültige, leere und unvollständige Eingaben bleiben erhalten', () => {
+  for (const raw of ['', '10000,', '-100', '1,234', 'abc']) assert.equal(formatMoneyInput(raw), raw);
+});
+test('Deutsche Daten: zweistellige Jahreszahl wird als 20xx ausgeschrieben', () => {
+  assert.equal(formatDateInput('12.12.25'), '12.12.2025');
+  assert.equal(formatDateInput('1.2.25'), '01.02.2025');
+  assert.equal(formatDateInput('01.01.00'), '01.01.2000');
+  assert.equal(formatDateInput('31.12.99'), '31.12.2099');
+});
+test('Deutsche Daten: vierstellige, kompakte und ISO-Eingaben', () => {
+  for (const raw of ['12.12.2025', '121225', '12122025', '2025-12-12', ' 12.12.25 ']) assert.equal(formatDateInput(raw), '12.12.2025');
+  assert.equal(formatDateInput('01.01.1999'), '01.01.1999');
+});
+test('Deutsche Daten: ungültige Tage werden nicht still korrigiert', () => {
+  for (const raw of ['31.04.25', '29.02.25', '32.12.25', '12.13.25', '00.12.25', '12.12.0000']) {
+    assert.equal(formatDateInput(raw), raw);
+    assert.equal(evaluateHoldingPeriod(raw, '31.12.2025').status, 'invalid');
+  }
+  assert.equal(formatDateInput('29.02.24'), '29.02.2024');
+});
+test('Deutsche Daten: unvollständige Eingaben bleiben beim Tippen neutral', () => {
+  for (const raw of ['', '1', '12', '12.', '12.1', '12.12.', '12.12.2', '12.12.202', '12122', '1212202']) {
+    assert.equal(formatDateInput(raw), raw);
+    assert.equal(evaluateHoldingPeriod(raw, '31.12.25').status, 'incomplete', raw);
+  }
+});
+test('Deutsche Daten: Haltedauer und Gewinn entsprechen der bisherigen ISO-Eingabe', () => {
+  const p = evaluateHoldingPeriod('21.08.25', '17.12.26', 393310n);
+  assert.equal(p.days, 483);
+  assert.equal(p.dailyAverageCents, 814n);
+  assert.equal(p.buyDate, '2025-08-21');
+  assert.equal(p.saleDate, '2026-12-17');
+  assert.equal(evaluateHoldingPeriod('26.10.25', '25.10.25').status, 'invalid');
 });

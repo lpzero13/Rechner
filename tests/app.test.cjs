@@ -93,3 +93,47 @@ test('every CSS/JS URL carries its actual content hash to invalidate stale cache
   }
   assert.equal((html.match(/(?:href|src)="src\//g) || []).length, refs.length);
 });
+
+test('portfolio formatting happens on blur without changing results while typing', () => {
+  const app = userCase();
+  assert.equal(app.elements.get('portfolio').value, '10000');
+  const before = app.text('scenario-net');
+  app.elements.get('portfolio').fire('blur');
+  assert.equal(app.elements.get('portfolio').value, '10.000,00');
+  assert.equal(app.text('shares'), '39');
+  assert.equal(app.text('scenario-net'), before);
+  app.input('portfolio', '10000,');
+  app.elements.get('portfolio').fire('blur');
+  assert.equal(app.elements.get('portfolio').value, '10000,');
+});
+test('German short dates format on blur and update the real period outputs', () => {
+  const app = userCase();
+  app.input('buyDate', '21.08.25');
+  app.input('saleDate', '17.12.26');
+  assert.equal(app.elements.get('buyDate').value, '21.08.25');
+  app.elements.get('buyDate').fire('blur');
+  app.elements.get('saleDate').fire('blur');
+  assert.equal(app.elements.get('buyDate').value, '21.08.2025');
+  assert.equal(app.elements.get('saleDate').value, '17.12.2026');
+  assert.equal(app.text('scenario-days'), '483 Kalendertage');
+  assert.equal(app.text('scenario-net'), '+3.933,10\u00a0€');
+});
+test('partial/invalid German dates do not alter the financial result', () => {
+  const app = userCase();
+  app.input('buyDate', '12.12.');
+  assert.equal(app.text('buyDate-error'), '');
+  assert.equal(app.text('scenario-days'), '—');
+  assert.equal(app.text('scenario-net'), '+3.933,10\u00a0€');
+  app.input('buyDate', '31.04.25');
+  app.elements.get('buyDate').fire('blur');
+  assert.equal(app.elements.get('buyDate').value, '31.04.25');
+  assert.ok(app.text('buyDate-error'));
+});
+test('blur formatting does not refill empty fields after a reset', () => {
+  const app = userCase();
+  app.window.fire('pageshow');
+  for (const id of ['portfolio', 'buyDate', 'saleDate']) {
+    app.elements.get(id).fire('blur');
+    assert.equal(app.elements.get(id).value, '');
+  }
+});

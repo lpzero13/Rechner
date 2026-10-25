@@ -42,6 +42,12 @@
   function formatMoney(cents, positive = false) {
     return (positive && cents > 0n ? '+' : '') + formatFixed(cents) + '\u00a0€';
   }
+  function formatMoneyInput(raw) {
+    const parsed = parseMoney(raw);
+    if (parsed.status !== 'valid') return String(raw ?? '');
+    const formatted = formatFixed(parsed.cents);
+    return formatted.length <= 120 ? formatted : String(raw ?? '');
+  }
   function percentHundredths(numerator, denominator) {
     if (denominator <= 0n || numerator < 0n) throw new RangeError('Ungültiges Verhältnis');
     return (numerator * 10000n + denominator / 2n) / denominator;
@@ -61,7 +67,7 @@
     return sign + formatFixed(rounded) + '\u00a0%';
   }
 
-  const api = { parseDecimal, parseMoney, formatInteger, formatMoney, formatPercent, percentHundredths, formatRatio, formatSignedPercent };
+  const api = { parseDecimal, parseMoney, formatInteger, formatMoney, formatMoneyInput, formatPercent, percentHundredths, formatRatio, formatSignedPercent };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PositionNumbers = api;
 })(typeof globalThis === 'object' ? globalThis : this);

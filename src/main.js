@@ -1,7 +1,7 @@
 (function () {
   'use strict';
-  const { evaluate, evaluateSaleScenario, evaluateHoldingPeriod } = globalThis.PositionCalculator;
-  const { parseDecimal, formatMoney, formatPercent, formatInteger, percentHundredths, formatRatio, formatSignedPercent } = globalThis.PositionNumbers;
+  const { evaluate, evaluateSaleScenario, evaluateHoldingPeriod, formatDateInput } = globalThis.PositionCalculator;
+  const { parseDecimal, formatMoney, formatMoneyInput, formatPercent, formatInteger, percentHundredths, formatRatio, formatSignedPercent } = globalThis.PositionNumbers;
   const byId = id => document.getElementById(id);
   const loadStatus = byId('app-status');
   window.addEventListener('error', () => {
@@ -32,11 +32,7 @@
   };
 
   function renderPeriod(scenario) {
-    let period = evaluateHoldingPeriod(byId('buyDate').value, byId('saleDate').value, scenario?.netGainCents ?? null);
-    for (const name of ['buyDate', 'saleDate']) {
-      const validity = byId(name).validity;
-      if (validity.badInput || validity.rangeOverflow || validity.rangeUnderflow) period = { status: 'invalid', errors: { ...period.errors, [name]: 'Bitte ein vollständiges, gültiges Datum eingeben.' } };
-    }
+    const period = evaluateHoldingPeriod(byId('buyDate').value, byId('saleDate').value, scenario?.netGainCents ?? null);
     for (const name of ['buyDate', 'saleDate']) {
       byId(name + '-error').textContent = period.errors[name] || '';
       byId(name).setAttribute('aria-invalid', String(Boolean(period.errors[name])));
@@ -44,7 +40,7 @@
     byId('scenario-days').textContent = '—';
     byId('scenario-daily-average').textContent = '—';
     if (period.status !== 'valid') {
-      byId('period-summary').textContent = period.status === 'invalid' ? 'Bitte prüfe den Zeitraum. Das fiktive Kursergebnis bleibt davon unabhängig.' : period.status === 'incomplete' ? 'Ergänze das zweite Datum, um die Haltedauer zu sehen.' : 'Ergänze optional Kauf- und Verkaufsdatum für die Haltedauer.';
+      byId('period-summary').textContent = period.status === 'invalid' ? 'Bitte prüfe den Zeitraum. Das fiktive Kursergebnis bleibt davon unabhängig.' : period.status === 'incomplete' ? 'Vervollständige beide Daten, um die Haltedauer zu sehen.' : 'Ergänze optional Kauf- und Verkaufsdatum für die Haltedauer.';
       return;
     }
     const formatDate = value => value.split('-').reverse().join('.');
@@ -146,6 +142,14 @@
   byId('scenario-form').addEventListener('submit', event => event.preventDefault());
   byId('scenario-form').addEventListener('input', render);
   byId('scenario-form').addEventListener('change', render);
+  byId('portfolio').addEventListener('blur', () => {
+    byId('portfolio').value = formatMoneyInput(byId('portfolio').value);
+    render();
+  });
+  for (const name of ['buyDate', 'saleDate']) byId(name).addEventListener('blur', () => {
+    byId(name).value = formatDateInput(byId(name).value);
+    render();
+  });
   for (const button of document.querySelectorAll('[data-risk]')) button.addEventListener('click', () => { byId('risk').value = button.dataset.risk; render(); });
   // Clear values also on history restoration; never restore financial input.
   window.addEventListener('pageshow', () => { byId('position-form').reset(); byId('scenario-form').reset(); render(); });

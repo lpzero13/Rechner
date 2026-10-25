@@ -1,4 +1,4 @@
-# Aktien-Positionsrechner 1.3.1
+# Aktien-Positionsrechner 1.4
 
 Eigenständige deutsche Web-App aus HTML, CSS und Vanilla JavaScript. Keine Installation, kein Build, keine Runtime-Abhängigkeiten und kein Backend.
 
@@ -96,6 +96,14 @@ Zusätzlich erscheint das **Ergebnis nach Kosten je Kalendertag, Ø**: fiktiver 
 
 Die Datumseingaben verändern weder Aktienzahl noch Gebührenmodell, werden nicht gespeichert und beim Neuladen oder Wiederherstellen aus dem Verlauf zusammen mit dem Verkaufskurs zurückgesetzt.
 
+## Eingabekomfort ab Version 1.4
+
+Der **Depotwert** wird beim Verlassen des Feldes mit deutschen Tausenderpunkten und zwei Centstellen dargestellt: `10000` → `10.000,00`, `1234567,89` → `1.234.567,89`. Beim Tippen findet keine Umformatierung statt, sodass die Schreibposition erhalten bleibt. Die Formatierung verwendet ebenfalls BigInt-Cents und verändert den Zahlenwert nicht. Ungültige oder unvollständige Eingaben werden nicht stillschweigend korrigiert.
+
+**Kauf- und Verkaufsdatum** sind jetzt frei beschreibbare Textfelder für die deutsche Schreibweise. `12.12.25` wird beim Verlassen des Feldes zu `12.12.2025`. Möglich sind auch `1.2.25`, `12.12.2025`, `121225` und `12122025`. Zweistellige Jahreszahlen bedeuten ausdrücklich **2000 bis 2099**; für andere Jahrhunderte das Jahr vierstellig eingeben, etwa `01.01.1999`. ISO-Werte wie `2025-12-12` bleiben für die Berechnungsfunktionen kompatibel.
+
+Unvollständige Datumseingaben bleiben während der Eingabe neutral. Ungültige Tage wie `31.04.25` werden nicht auf ein anderes Datum verschoben. Die Haltedauer verwendet intern weiterhin normalisierte ISO-Kalendertage; Kosten, Aktienanzahl und Gewinnrechnung bleiben unverändert. Nach dem Neuladen bleiben die Eingabefelder wie bisher leer.
+
 ## Tests
 
 Aus dem Repositoryordner:
@@ -152,3 +160,7 @@ Die unveränderten Asset-Adressen ließen einen Versionsmix zu: Die aktuelle HTM
 Korrektur: inhaltsabhängige Asset-Adressen und ein sichtbarer Initialisierungs-/Fehlerhinweis. Zusätzlich sieben Integrationstests gegen die tatsächlich ausgelieferte HTML-Datei und die echten JavaScript-Dateien in einer minimalen DOM-/Ereignis-Testumgebung. Diese Umgebung prüft die Anwendungsverdrahtung; sie ist kein Browser oder Layouttest. Nach der ausdrücklichen Bitte des Nutzers erfolgte die weitere Fehlerprüfung ausschließlich am Code.
 
 **80 Tests bestanden:** 73 Berechnungs-/Validierungstests und sieben App-Integrationstests. Sie prüfen den gemeldeten Fall über Formulareingaben, Brokerwechsel, Verluste, ungültige Eingaben, Rücksetzen der Formulare, Startfehler und die Asset-Hashes. Eingaben 10.000 € Depot, 1 % Risiko, Kauf 200,09 €, Stop 197,59 €, Trade Republic Bestpreis, Verkauf 300,99 € und 21.08.2025–17.12.2026 ergeben: **39 Aktien, Kaufbetrag 7.804,51 €, Kursgewinn 3.935,10 €, 2 € Orderkosten, fiktiver Nettogewinn 3.933,10 €, 483 Kalendertage und durchschnittlich 8,14 € pro Kalendertag**, vor Steuern.
+
+## Ergänzende Abnahme der Version 1.4 am 25.10.2026
+
+**92 Tests bestanden:** Zusätzlich acht Formatierungs-/Validierungstests und vier App-Integrationstests für das Verlassen der Felder, unveränderte Ergebnisse, kurze/ausgeschriebene/kompakte Daten, Jahrhundertregel, Schaltjahre, ungültige und unvollständige Eingaben, große centgenaue Depotwerte und leere Felder nach dem Zurücksetzen. Die Eingabehilfen wurden auf Codeebene einschließlich der HTML-/Ereignis-Anbindung geprüft; kein zusätzlicher Browserlauf.

@@ -136,16 +136,32 @@
   function parseCalendarDate(raw) {
     const value = String(raw ?? '').trim();
     if (!value) return { status: 'empty' };
-    const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-    if (!parts) return { status: 'invalid' };
-    const [, year, month, day] = parts.map(Number);
+    const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    const german = /^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/.exec(value);
+    const compact = /^(\d{2})(\d{2})(\d{2}|\d{4})$/.exec(value);
+    let yearText, monthText, dayText;
+    if (iso) [, yearText, monthText, dayText] = iso;
+    else if (german || compact) {
+      [, dayText, monthText, yearText] = german || compact;
+      if (yearText.length === 2) yearText = '20' + yearText;
+    } else {
+      const partial = /^\d{1,5}$|^\d{7}$|^\d{1,2}\.(?:\d{0,2})?$|^\d{1,2}\.\d{1,2}\.(?:\d{0,1}|\d{3})$/.test(value);
+      return { status: partial ? 'incomplete' : 'invalid' };
+    }
+    const [year, month, day] = [yearText, monthText, dayText].map(Number);
     if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) return { status: 'invalid' };
     // Use UTC calendar days. Local DST must never change a holding period.
     const date = new Date(0);
     date.setUTCFullYear(year, month - 1, day);
     date.setUTCHours(0, 0, 0, 0);
     if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return { status: 'invalid' };
-    return { status: 'valid', value, dayNumber: date.getTime() / 86400000 };
+    const normalized = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return { status: 'valid', value: normalized, dayNumber: date.getTime() / 86400000 };
+  }
+
+  function formatDateInput(raw) {
+    const date = parseCalendarDate(raw);
+    return date.status === 'valid' ? date.value.split('-').reverse().join('.') : String(raw ?? '');
   }
 
   function evaluateHoldingPeriod(rawBuyDate, rawSaleDate, netGainCents = null) {
@@ -153,11 +169,11 @@
     const buy = parseCalendarDate(rawBuyDate);
     const sale = parseCalendarDate(rawSaleDate);
     const errors = {};
-    if (buy.status === 'invalid') errors.buyDate = 'Bitte ein gültiges Kaufdatum eingeben.';
-    if (sale.status === 'invalid') errors.saleDate = 'Bitte ein gültiges Verkaufsdatum eingeben.';
+    if (buy.status === 'invalid') errors.buyDate = 'Bitte ein gültiges Kaufdatum eingeben, z. B. 12.12.25.';
+    if (sale.status === 'invalid') errors.saleDate = 'Bitte ein gültiges Verkaufsdatum eingeben, z. B. 12.12.25.';
     if (buy.status === 'valid' && sale.status === 'valid' && sale.dayNumber < buy.dayNumber) errors.saleDate = 'Das Verkaufsdatum darf nicht vor dem Kaufdatum liegen.';
     if (Object.keys(errors).length) return { status: 'invalid', errors };
-    if (buy.status === 'empty' || sale.status === 'empty') return { status: buy.status === 'empty' && sale.status === 'empty' ? 'empty' : 'incomplete', errors };
+    if (buy.status !== 'valid' || sale.status !== 'valid') return { status: buy.status === 'empty' && sale.status === 'empty' ? 'empty' : 'incomplete', errors };
     const days = sale.dayNumber - buy.dayNumber;
     let dailyAverageCents = null;
     if (days > 0 && netGainCents !== null) {
@@ -168,7 +184,7 @@
     return { status: 'valid', errors, days, buyDate: buy.value, saleDate: sale.value, dailyAverageCents };
   }
 
-  const api = { validateInputs, calculatePosition, evaluate, orderFee, normalizeCosts, calculateSaleScenario, evaluateSaleScenario, evaluateHoldingPeriod };
+  const api = { validateInputs, calculatePosition, evaluate, orderFee, normalizeCosts, calculateSaleScenario, evaluateSaleScenario, evaluateHoldingPeriod, formatDateInput };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PositionCalculator = api;
 })(typeof globalThis === 'object' ? globalThis : this);

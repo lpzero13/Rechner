@@ -9,15 +9,15 @@
   <title>Positionsrechner · Klar kalkuliert.</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232b5948'/%3E%3Cpath d='M17 43V31m15 12V21m15 22V12' stroke='%23e7f0b6' stroke-width='6'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="src/styles.css?v=5ee48486512e">
-  <script defer src="src/numbers.js?v=ae4032cfc784"></script>
-  <script defer src="src/calculations.js?v=0d33bf6b5456"></script>
-  <script defer src="src/main.js?v=22dc50a72230"></script>
+  <script defer src="src/numbers.js?v=73a922d76e33"></script>
+  <script defer src="src/calculations.js?v=02c4d35dc214"></script>
+  <script defer src="src/main.js?v=986aa0807030"></script>
 </head>
 <body>
   <a class="skip-link" href="#portfolio">Zu den Eingaben</a>
   <div class="page">
     <header class="header">
-      <a href="./index.html" class="brand" aria-label="Positionsrechner Startseite"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i></span>Positionsrechner<span class="version">1.3.1</span></a>
+      <a href="./index.html" class="brand" aria-label="Positionsrechner Startseite"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i></span>Positionsrechner<span class="version">1.4</span></a>
       <label class="theme-control"><span aria-hidden="true">◐</span><select id="theme-select" aria-label="Darstellung"><option value="system">System</option><option value="light">Hell</option><option value="dark">Dunkel</option></select></label>
     </header>
 
@@ -36,7 +36,7 @@
             <div class="field">
               <label for="portfolio">Aktueller Depotwert</label>
               <div class="input-shell"><input id="portfolio" name="portfolio" type="text" inputmode="decimal" placeholder="z. B. 10.000,00" aria-describedby="portfolio-help portfolio-error" spellcheck="false" autocomplete="off"><span aria-hidden="true">€</span></div>
-              <p class="field-help" id="portfolio-help">Der gesamte Wert deines Depots in Euro.</p>
+              <p class="field-help" id="portfolio-help">Der gesamte Wert deines Depots in Euro. Tausenderpunkte ergänzen wir beim Verlassen des Feldes.</p>
               <p class="field-error" id="portfolio-error"></p>
             </div>
             <fieldset class="risk-field"><legend>Risiko pro Trade</legend>
@@ -108,9 +108,10 @@
               <p class="field-error" id="salePrice-error"></p>
               <fieldset class="scenario-dates"><legend>Zeitraum <span class="optional-label">optional</span></legend>
                 <div class="date-fields">
-                  <div><label for="buyDate">Kaufdatum</label><div class="input-shell"><input id="buyDate" name="buyDate" type="date" min="0001-01-01" max="9999-12-31" aria-describedby="period-help buyDate-error" autocomplete="off"></div><p class="field-error" id="buyDate-error"></p></div>
-                  <div><label for="saleDate">Verkaufsdatum</label><div class="input-shell"><input id="saleDate" name="saleDate" type="date" min="0001-01-01" max="9999-12-31" aria-describedby="period-help saleDate-error" autocomplete="off"></div><p class="field-error" id="saleDate-error"></p></div>
+                  <div><label for="buyDate">Kaufdatum</label><div class="input-shell"><input id="buyDate" name="buyDate" type="text" inputmode="numeric" placeholder="z. B. 12.12.25" aria-describedby="date-format-help period-help buyDate-error" autocomplete="off" spellcheck="false"></div><p class="field-error" id="buyDate-error"></p></div>
+                  <div><label for="saleDate">Verkaufsdatum</label><div class="input-shell"><input id="saleDate" name="saleDate" type="text" inputmode="numeric" placeholder="z. B. 26.12.25" aria-describedby="date-format-help period-help saleDate-error" autocomplete="off" spellcheck="false"></div><p class="field-error" id="saleDate-error"></p></div>
                 </div>
+                <p class="field-help" id="date-format-help">Kurz tippen: 12.12.25 oder 121225 → 12.12.2025. Zweistellige Jahre: 2000–2099.</p>
                 <p class="field-help" id="period-help">Kalendertage zwischen Kauf und Verkauf, einschließlich Wochenenden. Kauf und Verkauf am selben Datum: 0 Tage.</p>
               </fieldset>
             </form>
