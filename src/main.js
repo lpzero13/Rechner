@@ -3,6 +3,11 @@
   const { evaluate, evaluateSaleScenario, evaluateHoldingPeriod } = globalThis.PositionCalculator;
   const { parseDecimal, formatMoney, formatPercent, formatInteger, percentHundredths, formatRatio, formatSignedPercent } = globalThis.PositionNumbers;
   const byId = id => document.getElementById(id);
+  const loadStatus = byId('app-status');
+  window.addEventListener('error', () => {
+    loadStatus.hidden = false;
+    loadStatus.textContent = 'Der Rechner konnte nicht vollständig ausgeführt werden. Lade die Seite vollständig neu (Strg+Umschalt+R) und prüfe, ob alle Projektdateien zusammen aktualisiert wurden.';
+  });
   const fields = ['portfolio', 'risk', 'entry', 'stop', 'costProfile', 'extraFee', 'buyFee', 'sellFee'];
   const outputIds = ['shares', 'purchase', 'loss', 'allocation', 'budget', 'per-share', 'actual-risk', 'stop-distance', 'target', 'rise', 'gain', 'buy-cost', 'stop-cost', 'total-cost', 'break-even', 'target-cost', 'net-ratio', 'net-target'];
   const defaultExplanation = byId('explanation-text').textContent;
@@ -145,4 +150,5 @@
   // Clear values also on history restoration; never restore financial input.
   window.addEventListener('pageshow', () => { byId('position-form').reset(); byId('scenario-form').reset(); render(); });
   render();
+  loadStatus.hidden = true;
 })();

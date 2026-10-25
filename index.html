@@ -8,20 +8,21 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
   <title>Positionsrechner · Klar kalkuliert.</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232b5948'/%3E%3Cpath d='M17 43V31m15 12V21m15 22V12' stroke='%23e7f0b6' stroke-width='6'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="src/styles.css">
-  <script defer src="src/numbers.js"></script>
-  <script defer src="src/calculations.js"></script>
-  <script defer src="src/main.js"></script>
+  <link rel="stylesheet" href="src/styles.css?v=5ee48486512e">
+  <script defer src="src/numbers.js?v=ae4032cfc784"></script>
+  <script defer src="src/calculations.js?v=0d33bf6b5456"></script>
+  <script defer src="src/main.js?v=22dc50a72230"></script>
 </head>
 <body>
   <a class="skip-link" href="#portfolio">Zu den Eingaben</a>
   <div class="page">
     <header class="header">
-      <a href="./index.html" class="brand" aria-label="Positionsrechner Startseite"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i></span>Positionsrechner<span class="version">1.3</span></a>
+      <a href="./index.html" class="brand" aria-label="Positionsrechner Startseite"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i></span>Positionsrechner<span class="version">1.3.1</span></a>
       <label class="theme-control"><span aria-hidden="true">◐</span><select id="theme-select" aria-label="Darstellung"><option value="system">System</option><option value="light">Hell</option><option value="dark">Dunkel</option></select></label>
     </header>
 
     <main>
+      <p id="app-status" class="app-status" role="alert">Die Rechner-Dateien sind noch nicht vollständig geladen. Bleibt diese Meldung sichtbar, lade die Seite vollständig neu (Strg+Umschalt+R) und prüfe, ob alle Projektdateien aktualisiert wurden.</p>
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow"><span></span> DEIN RISIKO. DEIN PLAN.</p>
         <h1 id="page-title">Klar kalkuliert.<br><span>Bewusst positioniert.</span></h1>

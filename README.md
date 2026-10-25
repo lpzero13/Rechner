@@ -1,4 +1,4 @@
-# Aktien-Positionsrechner 1.3
+# Aktien-Positionsrechner 1.3.1
 
 Eigenständige deutsche Web-App aus HTML, CSS und Vanilla JavaScript. Keine Installation, kein Build, keine Runtime-Abhängigkeiten und kein Backend.
 
@@ -101,12 +101,29 @@ Die Datumseingaben verändern weder Aktienzahl noch Gebührenmodell, werden nich
 Aus dem Repositoryordner:
 
 ```text
-node --test tests/calculations.test.cjs
+node --test tests/calculations.test.cjs tests/app.test.cjs
 ```
 
 Tests für sämtliche Beispielwerte, Presets, freien Risikowert, Stop-Abstände, Kapitalgrenze, Nullpositionen, Validierung, deutsche Formate, Cent-Rundung, große Zahlen und 2.000 deterministische Grenzprüfungen. Node wird ausschließlich zum Testen benötigt.
 
 `src/numbers.js` enthält Parser und Ausgabeformatierung, `src/calculations.js` die unabhängig testbare Berechnung, `src/main.js` verbindet diese mit der Oberfläche.
+
+## Dateien aktualisieren und Cache-Konsistenz
+
+CSS und JavaScript werden in `index.html` mit einem Inhalts-Hash in der URL eingebunden, zum Beispiel `src/main.js?v=...`. Geänderter Inhalt erhält damit eine neue Cache-Adresse. Dies verhindert, dass eine neue HTML-Oberfläche unbemerkt mit altem JavaScript oder ohne die zugehörigen neuen CSS-Regeln geöffnet wird. Alle vier Dateien sind gemeinsam erfasst; die Prüfung erkennt veraltete Versionsverweise auch unter Windows und Linux.
+
+Nach Änderungen an CSS oder JavaScript aus dem Repositoryordner ausführen:
+
+```text
+node tools/update-assets.cjs
+node --test tests/calculations.test.cjs tests/app.test.cjs
+```
+
+Die aktualisierte `index.html` zusammen mit den geänderten Quellen committen. Der Helfer gehört ausschließlich zum Entwicklungsablauf: Die ausgelieferte App bleibt ohne Build, Node-Runtime oder Backend nutzbar. Der Testlauf schlägt fehl, wenn Hash und Dateiinhalte nicht mehr übereinstimmen.
+
+Auf dem Webserver sämtliche Projektdateien aus demselben Commit aktualisieren, etwa bei sauberem Checkout mit `git pull --ff-only`. HTML sollte vom statischen Server mit `Cache-Control: no-cache` ausgeliefert werden, damit der Browser neue Asset-Verweise revalidiert. Ein GitHub-Upload allein aktualisiert keinen separat betriebenen Webserver. Nach einem bestehenden veralteten Seitenstand einmal vollständig neu laden (`Strg+Umschalt+R`); dabei werden wie bisher die Eingaben verworfen.
+
+Ein sichtbarer Ladehinweis bleibt stehen, wenn die App nicht vollständig startet. Statt unerklärter leerer Ergebnisse wird außerdem bei einem Skriptfehler eine Fehlermeldung angezeigt. Der Hinweis verschwindet erst nach erfolgreicher Initialisierung aller Berechnungsansichten.
 
 ## Abnahme am 24.10.2026
 
@@ -127,3 +144,11 @@ Tests für sämtliche Beispielwerte, Presets, freien Risikowert, Stop-Abstände,
 
 - 73 automatisierte Tests bestanden. Zusätzliche Prüfungen für 14-Tage-Beispiel, 0 Tage, Wochenenden, Sommer-/Winterzeitwechsel, gregorianische Schaltjahre, Jahreswechsel, frühe Jahre, ungültige oder unvollständige Daten, umgekehrte Zeiträume, positive/negative Cent-Rundung und große Beträge. Zeitraum und Kursergebnis bleiben unabhängig.
 - Im Browser 14-Tage-Beispiel, Verlust, gleicher Tag, fehlendes Datum und umgekehrte Reihenfolge geprüft. Datumsfelder und Ergebnisse auf Desktop und bei 320 Pixeln in Hell/Dunkel ohne horizontalen Überlauf kontrolliert. Neuladen leert beide Daten und den Verkaufskurs; keine JavaScript-Konsolenfehler.
+
+## Fehlerkorrektur 1.3.1 am 25.10.2026
+
+Die unveränderten Asset-Adressen ließen einen Versionsmix zu: Die aktuelle HTML-Datei zeigte Schritt 3 bereits an, während altes JavaScript aus Version 1.1 nur Schritt 1/2 bediente und alte CSS-Regeln die neue Karte nicht gestalteten. Dieser Zustand wurde auf Codeebene mit dem tatsächlichen alten JavaScript und dem aktuellen HTML reproduziert. Die frühere Rechentestsuite erfasste die Verbindung zwischen HTML, Formularevents und Ergebnisanzeige nicht.
+
+Korrektur: inhaltsabhängige Asset-Adressen und ein sichtbarer Initialisierungs-/Fehlerhinweis. Zusätzlich sieben Integrationstests gegen die tatsächlich ausgelieferte HTML-Datei und die echten JavaScript-Dateien in einer minimalen DOM-/Ereignis-Testumgebung. Diese Umgebung prüft die Anwendungsverdrahtung; sie ist kein Browser oder Layouttest. Nach der ausdrücklichen Bitte des Nutzers erfolgte die weitere Fehlerprüfung ausschließlich am Code.
+
+**80 Tests bestanden:** 73 Berechnungs-/Validierungstests und sieben App-Integrationstests. Sie prüfen den gemeldeten Fall über Formulareingaben, Brokerwechsel, Verluste, ungültige Eingaben, Rücksetzen der Formulare, Startfehler und die Asset-Hashes. Eingaben 10.000 € Depot, 1 % Risiko, Kauf 200,09 €, Stop 197,59 €, Trade Republic Bestpreis, Verkauf 300,99 € und 21.08.2025–17.12.2026 ergeben: **39 Aktien, Kaufbetrag 7.804,51 €, Kursgewinn 3.935,10 €, 2 € Orderkosten, fiktiver Nettogewinn 3.933,10 €, 483 Kalendertage und durchschnittlich 8,14 € pro Kalendertag**, vor Steuern.

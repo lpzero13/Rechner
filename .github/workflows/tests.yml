@@ -31,5 +31,6 @@ jobs:
           node --check src/numbers.js
           node --check src/calculations.js
           node --check src/main.js
-      - name: Calculation and validation tests
-        run: node --test tests/calculations.test.cjs
+          node --check tools/update-assets.cjs
+      - name: Calculation and app integration tests
+        run: node --test tests/calculations.test.cjs tests/app.test.cjs

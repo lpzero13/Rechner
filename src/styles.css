@@ -3,6 +3,7 @@
 :root[data-theme="dark"] { color-scheme:dark; --bg:#10161e; --card:#1a232e; --text:#edf2f7; --muted:#adb9c9; --line:#3d4b5e; --field:#121b26; --green:#bedf99; --accent:#2c402e; --target:#20332c; --loss:#ffb3a2; --error:#ffb5a4; --shadow:0 8px 32px #0002; }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--text); font-size:14px; line-height:1.5; }
+.app-status { padding:16px; border:1px solid var(--loss); border-radius:9px; background:var(--card); color:var(--text); line-height:1.7; }
 button,input,select { font:inherit; }
 button { appearance:none; }
 [hidden] { display:none !important; }
