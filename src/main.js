@@ -1,7 +1,7 @@
 (function () {
   'use strict';
-  const { evaluate } = globalThis.PositionCalculator;
-  const { parseDecimal, formatMoney, formatPercent, formatInteger, percentHundredths, formatRatio } = globalThis.PositionNumbers;
+  const { evaluate, evaluateSaleScenario } = globalThis.PositionCalculator;
+  const { parseDecimal, formatMoney, formatPercent, formatInteger, percentHundredths, formatRatio, formatSignedPercent } = globalThis.PositionNumbers;
   const byId = id => document.getElementById(id);
   const fields = ['portfolio', 'risk', 'entry', 'stop', 'costProfile', 'extraFee', 'buyFee', 'sellFee'];
   const outputIds = ['shares', 'purchase', 'loss', 'allocation', 'budget', 'per-share', 'actual-risk', 'stop-distance', 'target', 'rise', 'gain', 'buy-cost', 'stop-cost', 'total-cost', 'break-even', 'target-cost', 'net-ratio', 'net-target'];
@@ -26,6 +26,37 @@
     manual: 'Trage die erwarteten Gesamtkosten je Order aus der Kosteninformation deines Brokers ein.',
   };
 
+  function renderScenario(position) {
+    const scenario = evaluateSaleScenario(byId('salePrice').value, position);
+    const outputs = ['scenario-net', 'scenario-sale-value', 'scenario-gross', 'scenario-buy-fee', 'scenario-sell-fee', 'scenario-total-fees', 'scenario-return', 'scenario-portfolio-return'];
+    byId('salePrice-error').textContent = scenario.message || '';
+    byId('salePrice').setAttribute('aria-invalid', String(scenario.status === 'invalid'));
+    byId('scenario-shares').textContent = position ? formatInteger(position.shares) : '—';
+    byId('scenario-entry').textContent = position ? formatMoney(position.entryCents) : '—';
+    byId('scenario-broker').textContent = byId('costProfile').selectedOptions[0].textContent + ' · Kaufkosten werden einmal berücksichtigt.';
+    byId('scenario-net').classList.remove('positive', 'negative');
+    if (scenario.status !== 'valid') {
+      for (const id of outputs) byId(id).textContent = '—';
+      byId('scenario-status').textContent = scenario.status === 'invalid' ? 'Bitte prüfe den eingegebenen Verkaufskurs.' : !position ? 'Berechne zuerst oben eine gültige Position.' : position.shares === 0n ? 'Ohne ganze Aktie ist keine Gewinnrechnung möglich.' : 'Trage einen Verkaufskurs ein, um dein Szenario zu berechnen.';
+      return;
+    }
+    const s = scenario.result;
+    const values = {
+      'scenario-net': formatMoney(s.netGainCents, true),
+      'scenario-sale-value': formatMoney(s.saleValueCents),
+      'scenario-gross': formatMoney(s.grossGainCents, true),
+      'scenario-buy-fee': formatMoney(s.buyFeeCents),
+      'scenario-sell-fee': formatMoney(s.sellFeeCents),
+      'scenario-total-fees': formatMoney(s.totalCostsCents),
+      'scenario-return': formatSignedPercent(s.netGainCents, s.investedCents),
+      'scenario-portfolio-return': formatSignedPercent(s.netGainCents, position.portfolioCents),
+    };
+    for (const [id, value] of Object.entries(values)) byId(id).textContent = value;
+    if (s.netGainCents !== 0n) byId('scenario-net').classList.add(s.netGainCents > 0n ? 'positive' : 'negative');
+    const outcome = s.netGainCents > 0n ? 'Fiktiver Gewinn' : s.netGainCents < 0n ? 'Fiktiver Verlust' : 'Weder Gewinn noch Verlust';
+    byId('scenario-status').textContent = `${outcome}: ${formatMoney(s.netGainCents, true)} nach Orderkosten bei Verkauf aller ${formatInteger(s.shares)} Aktien zu ${formatMoney(s.saleCents)}. Vor Steuern.`;
+  }
+
   function render() {
     const raw = Object.fromEntries(fields.map(name => [name, byId(name).value]));
     byId('ing-costs').hidden = !['ing', 'ing-young'].includes(raw.costProfile);
@@ -49,6 +80,7 @@
       byId('explanation-text').textContent = defaultExplanation;
       byId('cost-effect').textContent = 'Kauf- und Verkaufskosten teilen sich dein Risikobudget mit dem Kursverlust.';
       byId('gain').classList.remove('negative');
+      renderScenario();
       return;
     }
     const r = evaluation.result;
@@ -75,13 +107,16 @@
     if (r.capitalLimited) notes.push('Die Depotwertgrenze begrenzt deine Aktienanzahl. Dein Risikobudget würde mehr Aktien erlauben. Die tatsächlich verfügbare Liquidität wird nicht geprüft.');
     if (notes.length) { byId('limit-note').textContent = notes.join(' '); byId('limit-note').hidden = false; }
     byId('explanation-text').textContent = `Bei einem Kauf zu ${formatMoney(r.entryCents)} und einem Stop bei ${formatMoney(r.stopCents)} planst du ${formatMoney(r.lossPerShareCents)} Kursverlust je Aktie. Mit ${formatInteger(r.shares)} ${r.shares === 1n ? 'Aktie' : 'Aktien'} ergibt das ${formatMoney(r.grossLossCents)} Kursverlust plus ${formatMoney(r.stopCostsCents)} Orderkosten: insgesamt ${formatMoney(r.lossCents)} oder ${formatPercent(r.lossCents, r.portfolioCents)} deines Depots. Gebühren senken den Nettogewinn; der Kurs für 3:1 nach Kosten liegt deshalb meist höher.`;
+    renderScenario(r);
   }
 
   byId('position-form').addEventListener('submit', event => event.preventDefault());
   byId('position-form').addEventListener('input', render);
   byId('position-form').addEventListener('change', render);
+  byId('scenario-form').addEventListener('submit', event => event.preventDefault());
+  byId('scenario-form').addEventListener('input', render);
   for (const button of document.querySelectorAll('[data-risk]')) button.addEventListener('click', () => { byId('risk').value = button.dataset.risk; render(); });
   // Clear values also on history restoration; never restore financial input.
-  window.addEventListener('pageshow', () => { byId('position-form').reset(); render(); });
+  window.addEventListener('pageshow', () => { byId('position-form').reset(); byId('scenario-form').reset(); render(); });
   render();
 })();

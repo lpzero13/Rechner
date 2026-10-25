@@ -84,7 +84,7 @@
     const gainCents = shares * 3n * lossPerShareCents - buyFeeCents - targetFeeCents;
     const netTargetCents = priceForNetGain(shares, entryCents, buyFeeCents, costs, 3n * lossCents);
     return {
-      portfolioCents, entryCents, stopCents, budgetCents, lossPerShareCents, riskShares, capitalShares, shares,
+      portfolioCents, entryCents, stopCents, budgetCents, lossPerShareCents, riskShares, capitalShares, shares, costs,
       purchaseCents: shares * entryCents + buyFeeCents,
       stockValueCents: shares * entryCents,
       lossCents, targetCents, gainCents, buyFeeCents, stopFeeCents, targetFeeCents,
@@ -106,7 +106,34 @@
     return { ...validation, result: calculatePosition({ portfolioCents: v.portfolio.cents, entryCents: v.entry.cents, stopCents: v.stop.cents, riskNumerator: v.risk.numerator, riskScale: v.risk.scale, costs: { profile: raw.costProfile ?? 'none', buyCents: v.buyFee?.cents ?? 0n, sellCents: v.sellFee?.cents ?? 0n, extraCents: v.extraFee?.cents ?? 0n } }) };
   }
 
-  const api = { validateInputs, calculatePosition, evaluate, orderFee, normalizeCosts };
+  function calculateSaleScenario(position, saleCents) {
+    if (typeof saleCents !== 'bigint' || saleCents <= 0n || typeof position?.shares !== 'bigint' || position.shares < 0n || typeof position.entryCents !== 'bigint' || position.entryCents <= 0n || typeof position.buyFeeCents !== 'bigint' || position.buyFeeCents < 0n) throw new RangeError('Ungültige Szenariowerte');
+    const costs = normalizeCosts(position.costs);
+    const { shares, entryCents } = position;
+    const buyFeeCents = shares === 0n ? 0n : position.buyFeeCents;
+    const saleValueCents = shares * saleCents;
+    const sellFeeCents = orderFee(saleValueCents, 'sell', costs);
+    const totalCostsCents = buyFeeCents + sellFeeCents;
+    const grossGainCents = shares * (saleCents - entryCents);
+    return {
+      shares, saleCents, saleValueCents, buyFeeCents, sellFeeCents, totalCostsCents, grossGainCents,
+      netProceedsCents: saleValueCents - sellFeeCents,
+      netGainCents: grossGainCents - totalCostsCents,
+      investedCents: shares * entryCents + buyFeeCents,
+    };
+  }
+
+  function evaluateSaleScenario(rawPrice, position) {
+    const price = numbers.parseMoney(rawPrice);
+    if (price.status === 'invalid') return { status: 'invalid', message: price.message };
+    if (price.status !== 'valid') return { status: 'incomplete' };
+    if (price.cents <= 0n) return { status: 'invalid', message: 'Der Verkaufskurs muss größer als null sein.' };
+    if (!position) return { status: 'unavailable' };
+    if (position.shares === 0n) return { status: 'no-shares' };
+    return { status: 'valid', result: calculateSaleScenario(position, price.cents) };
+  }
+
+  const api = { validateInputs, calculatePosition, evaluate, orderFee, normalizeCosts, calculateSaleScenario, evaluateSaleScenario };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PositionCalculator = api;
 })(typeof globalThis === 'object' ? globalThis : this);

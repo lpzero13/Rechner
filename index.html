@@ -17,7 +17,7 @@
   <a class="skip-link" href="#portfolio">Zu den Eingaben</a>
   <div class="page">
     <header class="header">
-      <a href="./index.html" class="brand" aria-label="Positionsrechner Startseite"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i></span>Positionsrechner<span class="version">1.1</span></a>
+      <a href="./index.html" class="brand" aria-label="Positionsrechner Startseite"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i></span>Positionsrechner<span class="version">1.2</span></a>
       <label class="theme-control"><span aria-hidden="true">◐</span><select id="theme-select" aria-label="Darstellung"><option value="system">System</option><option value="light">Hell</option><option value="dark">Dunkel</option></select></label>
     </header>
 
@@ -93,6 +93,38 @@
           <div class="target-panel"><div class="target-heading"><h3>Wenn aus Risiko Chance wird.</h3><span class="ratio">3 : 1</span></div><p class="target-disclaimer">Orientierung, keine Prognose · vor Steuern</p><div class="target-price"><div><span>3:1-Kurs vor Kosten</span><output id="target">—</output></div><output class="target-rise" id="rise">—</output></div><div class="target-gain"><span>Gewinn nach Orderkosten</span><output id="gain">—</output></div><dl class="details target-details"><div><dt>Verkaufskosten an diesem Ziel</dt><dd id="target-cost">—</dd></div><div><dt>Chance / Risiko nach Kosten</dt><dd id="net-ratio">—</dd></div><div class="net-target-row"><dt>Kurs für mindestens 3:1 nach Kosten</dt><dd id="net-target">—</dd></div></dl><p class="field-help">Der Kurs für 3:1 nach Kosten berücksichtigt auch die Kaufkosten und die am höheren Verkaufskurs anfallenden Gebühren.</p></div>
         </section>
       </div>
+
+      <section class="card scenario-card" aria-labelledby="scenario-title">
+        <div class="card-heading"><h2 id="scenario-title">Was wäre, wenn?</h2><span class="step">03 / FIKTIVER GEWINN</span></div>
+        <div class="scenario-grid">
+          <div class="scenario-input">
+            <p class="scenario-intro">Ein Kurs, dein Szenario.</p>
+            <p class="scenario-copy">Was wäre deine Position wert, wenn du alle Aktien zu diesem Kurs verkaufst?</p>
+            <form id="scenario-form" novalidate autocomplete="off">
+              <label for="salePrice">Angenommener Verkaufskurs je Aktie</label>
+              <div class="input-shell"><input id="salePrice" name="salePrice" type="text" inputmode="decimal" placeholder="z. B. 60,00" aria-describedby="salePrice-help salePrice-error" autocomplete="off" spellcheck="false"><span aria-hidden="true">€</span></div>
+              <p class="field-help" id="salePrice-help">Auch ein Kurs unter deinem Einstieg ist möglich.</p>
+              <p class="field-error" id="salePrice-error"></p>
+            </form>
+            <div class="scenario-context"><span>Aus Schritt 2 übernommen</span><p><strong id="scenario-shares">—</strong> Aktien zu <strong id="scenario-entry">—</strong></p><p id="scenario-broker">Das oben gewählte Kostenmodell gilt auch hier.</p></div>
+          </div>
+          <div class="scenario-result">
+            <p class="small-label">FIKTIVER GEWINN / VERLUST NACH ORDERKOSTEN</p>
+            <output id="scenario-net" class="scenario-net">—</output>
+            <p id="scenario-status" class="scenario-status" role="status" aria-live="polite" aria-atomic="true">Berechne zuerst deine Position und trage einen Verkaufskurs ein.</p>
+            <dl class="details scenario-details">
+              <div><dt>Verkaufswert vor Kosten</dt><dd id="scenario-sale-value">—</dd></div>
+              <div><dt>Kursgewinn / -verlust vor Kosten</dt><dd id="scenario-gross">—</dd></div>
+              <div><dt>Kaufkosten</dt><dd id="scenario-buy-fee">—</dd></div>
+              <div><dt>Verkaufskosten bei diesem Kurs</dt><dd id="scenario-sell-fee">—</dd></div>
+              <div><dt>Orderkosten insgesamt</dt><dd id="scenario-total-fees">—</dd></div>
+              <div class="scenario-return"><dt>Rendite auf Kaufbetrag inkl. Kaufkosten</dt><dd id="scenario-return">—</dd></div>
+              <div><dt>Auswirkung auf dein Depot</dt><dd id="scenario-portfolio-return">—</dd></div>
+            </dl>
+          </div>
+        </div>
+        <p class="scenario-disclaimer">Reine Kursannahme, vor Steuern. Angenommen, du hältst die gesamte Position bis zum Verkauf zu diesem Kurs. Ein Kursverlauf und eine tatsächliche Stop-Ausführung werden nicht simuliert. Dein Verkaufskurs verändert die Positionsgröße aus Schritt 2 nicht.</p>
+      </section>
 
       <section class="explanation" aria-labelledby="explanation-title"><span class="explanation-icon" aria-hidden="true">i</span><div><h2 id="explanation-title">Ein Plan für deine Positionsgröße.</h2><p id="explanation-text">Je größer der Abstand zwischen Kaufkurs und Stop-Loss, desto kleiner die Position bei gleichem Risikobudget. Wir runden auf ganze Aktien ab und begrenzen den Kaufbetrag auf deinen Depotwert.</p></div></section>
       <aside class="risk-notice" aria-label="Risiko- und Währungshinweise"><p><strong>Geplant heißt nicht garantiert.</strong> Das gewählte Risiko ist kein garantiertes Verlustmaximum. Kurssprünge, abweichende Ausführungspreise und Gebühren können den tatsächlichen Verlust erhöhen.</p><p><strong>Nur Euro.</strong> Rechne Kurse in anderen Währungen, etwa US-Dollar, vorher in Euro um. Depotwert, Kaufkurs und Stop-Loss müssen dieselbe Währung verwenden.</p></aside>

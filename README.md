@@ -1,4 +1,4 @@
-# Aktien-Positionsrechner 1.1
+# Aktien-Positionsrechner 1.2
 
 Eigenständige deutsche Web-App aus HTML, CSS und Vanilla JavaScript. Keine Installation, kein Build, keine Runtime-Abhängigkeiten und kein Backend.
 
@@ -66,6 +66,26 @@ Spreads sind keine bekannte feste Ordergebühr. Der Einstieg sollte der erwartet
 
 Die Depotwertgrenze prüft keine freie Liquidität. Alle Eingaben müssen in Euro vorliegen. Das Risiko ist kein garantiertes Verlustmaximum: Gaps, Ausführungspreise und Gebühren können tatsächliche Verluste erhöhen. Der 3:1-Kurs ist eine Orientierung, keine Prognose. Keine Brokerorders oder automatische Stop-Bestimmung.
 
+## Schritt 3: fiktiver Gewinn / Verlust ab Version 1.2
+
+Die separate Karte **Was wäre, wenn?** übernimmt die ganze Aktienanzahl und den Kaufkurs aus Schritt 2. Ein optionaler **angenommener Verkaufskurs je Aktie** berechnet sofort das Ergebnis eines vollständigen Verkaufs dieser Position. Der Szenariokurs wird nicht zur Bestimmung der Positionsgröße verwendet. Änderungen der Ausgangslage oder des Kostenmodells aktualisieren auch Schritt 3; ungültige oder fehlende Basiseingaben löschen veraltete Szenarioergebnisse.
+
+```text
+Verkaufswert = Aktienanzahl × angenommener Verkaufskurs
+Kursgewinn / -verlust = Aktienanzahl × (Verkaufskurs − Kaufkurs)
+Fiktiver Gewinn / Verlust nach Orderkosten = Kursgewinn / -verlust − Kaufkosten − Verkaufskosten
+Rendite = fiktives Ergebnis / Kaufbetrag einschließlich Kaufkosten × 100
+Depotauswirkung = fiktives Ergebnis / ursprünglicher Depotwert × 100
+```
+
+Die Kaufkosten werden genau einmal abgezogen. ING-Verkaufskosten werden aus dem tatsächlichen Szenario-Verkaufswert neu berechnet, einschließlich Provisionsdeckel und Handelsplatzzuschlag. Für manuell eingetragene Kosten gilt der gleiche feste Verkaufsbetrag wie in Schritt 2. Alle Geldbeträge werden weiterhin ausschließlich mit ganzzahligen BigInt-Cents gerechnet; prozentuale Gewinne und Verluste erhalten ein passendes Vorzeichen.
+
+Beispiel mit 10.000 € Depot, 1 % Risiko, Kauf 50 €, Stop 47,50 € und Trade Republic Bestpreis: 39 Aktien. Bei einem angenommenen Verkauf zu **60 €** ergibt das **390 € Kursgewinn − 1 € Kaufkosten − 1 € Verkaufskosten = 388 € fiktiven Gewinn nach Orderkosten**, vor Steuern. Das entspricht 19,89 % auf die 1.951 € Kaufbetrag und 3,88 % des Depots. Zu 45 € wären es 197 € Verlust einschließlich Kosten. Bei ING Standard ohne Handelsplatzzuschlag sind es bei 60 € und den dort berechneten 32 Aktien 301,40 € nach 8,90 € Kauf- und 9,70 € Verkaufskosten.
+
+Der Verkaufskurs muss größer als null sein und darf maximal zwei Nachkommastellen enthalten. Kurse unter dem Einstieg sind ausdrücklich zulässig. Leer oder unvollständig gelassene Szenariokurse beeinflussen Schritt 2 nicht. Bei null Aktien oder fehlender Position werden keine Szenarioergebnisse oder Prozentwerte angezeigt. Das Feld startet leer und wird beim Neuladen beziehungsweise Wiederherstellen aus dem Seitenverlauf zurückgesetzt; keine Speicherung oder Übertragung.
+
+Die Rechnung ist eine reine Kursannahme vor Steuern, kein realisierter Gewinn und keine Prognose. Sie setzt voraus, dass alle Aktien bis zum angenommenen Verkauf gehalten werden. Insbesondere wird kein zwischenzeitlicher Kursverlauf mit möglicher Stop-Ausführung simuliert. Bestehende Hinweise zu Spreads, Ausführungsabweichungen und Euro-Währung gelten weiter.
+
 ## Tests
 
 Aus dem Repositoryordner:
@@ -86,3 +106,9 @@ Tests für sämtliche Beispielwerte, Presets, freien Risikowert, Stop-Abstände,
 - Tab-Reihenfolge, sichtbarer Fokus, Preset per Leertaste und Texteingabe geprüft. Neuladen verwirft die Eingaben und stellt die beschriebenen Voreinstellungen wieder her.
 - Direkter `file://`-Start konnte im automatisierten Vorschau-Browser nicht abgenommen werden, da dessen Sicherheitsrichtlinie nur HTTP(S) erlaubt. Die lokale HTTP-Variante wurde erfolgreich geprüft.
 - GitHub Actions führt die Tests unter Windows und Linux mit Node.js 24 aus. Node wird nur für Tests benötigt. Das Repository enthält keinen automatischen Website-Deploy.
+
+## Ergänzende Abnahme der Version 1.2 am 25.10.2026
+
+- 61 automatisierte Tests bestanden. Neue Prüfungen umfassen freie Verkaufskurse, Gewinn und Verlust, identischen Kauf-/Verkaufskurs, alle Kostenmodelle, Gebühren genau einmal, ING-Provisionsdeckel, große centgenaue Beträge, Nullpositionen, optionale Feldvalidierung und unveränderte Positionsgröße. Szenarioergebnisse stimmen am Stop, am bestehenden 3:1-Ziel, an der Gewinnschwelle und am Ziel nach Kosten mit Schritt 2 überein.
+- Browserprüfung des TR-/ING-Beispiels, Verlustrechnung, ungültigem Verkaufskurs sowie dem Entfernen veralteter Ergebnisse bei leerer Ausgangslage oder null Aktien.
+- Schritt 3 auf Desktop und bei 320 Pixeln Breite in Hell und Dunkel visuell geprüft, ohne horizontalen Überlauf. Nach dem Neuladen ist auch der Szenariokurs wieder leer; keine JavaScript-Konsolenfehler.

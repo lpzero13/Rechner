@@ -1,8 +1,8 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { evaluate, calculatePosition, orderFee, normalizeCosts } = require('../src/calculations.js');
-const { parseMoney, parseDecimal, formatMoney, formatPercent, formatRatio } = require('../src/numbers.js');
+const { evaluate, calculatePosition, orderFee, normalizeCosts, calculateSaleScenario, evaluateSaleScenario } = require('../src/calculations.js');
+const { parseMoney, parseDecimal, formatMoney, formatPercent, formatRatio, formatSignedPercent } = require('../src/numbers.js');
 const base = { portfolio: '10.000,00', risk: '1', entry: '50,00', stop: '47,50' };
 const result = changes => {
   const evaluation = evaluate({ ...base, ...changes });
@@ -255,4 +255,108 @@ test('unabhängige vollständige Suche: Aktienzahl, Gewinnschwelle und Nettoziel
       assert.ok(r.netTargetGainCents >= 3n * r.lossCents);
     }
   }
+});
+
+test('Schritt 3: TR-Verkauf zu 60 Euro übernimmt 39 Aktien und beide Kosten einmal', () => {
+  const position = result({ costProfile: 'tr' });
+  const scenario = calculateSaleScenario(position, 6000n);
+  assert.equal(scenario.shares, 39n);
+  assert.equal(scenario.saleValueCents, 234000n);
+  assert.equal(scenario.grossGainCents, 39000n);
+  assert.equal(scenario.buyFeeCents, 100n);
+  assert.equal(scenario.sellFeeCents, 100n);
+  assert.equal(scenario.totalCostsCents, 200n);
+  assert.equal(scenario.netGainCents, 38800n);
+  assert.equal(scenario.investedCents, position.purchaseCents);
+  assert.equal(scenario.netProceedsCents - position.purchaseCents, scenario.netGainCents);
+  assert.equal(formatSignedPercent(scenario.netGainCents, scenario.investedCents), '+19,89\u00a0%');
+  assert.equal(formatSignedPercent(scenario.netGainCents, position.portfolioCents), '+3,88\u00a0%');
+});
+test('Schritt 3: ING-Gebühr verwendet den eingegebenen Verkaufskurs', () => {
+  const position = result({ costProfile: 'ing', extraFee: '0' });
+  const scenario = calculateSaleScenario(position, 6000n);
+  assert.equal(scenario.shares, 32n);
+  assert.equal(scenario.buyFeeCents, 890n);
+  assert.equal(scenario.sellFeeCents, 970n);
+  assert.equal(scenario.totalCostsCents, 1860n);
+  assert.equal(scenario.netGainCents, 30140n);
+  assert.notEqual(scenario.sellFeeCents, position.stopFeeCents);
+  assert.notEqual(scenario.sellFeeCents, position.targetFeeCents);
+});
+test('Schritt 3: Kurs unter Einstieg ergibt einen Verlust einschließlich Kosten', () => {
+  const scenario = calculateSaleScenario(result({ costProfile: 'tr' }), 4500n);
+  assert.equal(scenario.grossGainCents, -19500n);
+  assert.equal(scenario.netGainCents, -19700n);
+  assert.equal(formatSignedPercent(scenario.netGainCents, scenario.investedCents), '−10,10\u00a0%');
+  assert.equal(formatSignedPercent(scenario.netGainCents, 1000000n), '−1,97\u00a0%');
+});
+test('Schritt 3: gleicher Kurs ist wegen Gebühren kein Break-even', () => {
+  assert.equal(calculateSaleScenario(result({ costProfile: 'tr' }), 5000n).netGainCents, -200n);
+  assert.equal(calculateSaleScenario(result({ costProfile: 'none' }), 5000n).netGainCents, 0n);
+  assert.equal(formatSignedPercent(0n, 100n), '0,00\u00a0%');
+  assert.equal(formatSignedPercent(-1n, 1000000n), '0,00\u00a0%');
+});
+test('Schritt 3: alle Kostenmodelle stimmen am bisherigen Ziel und Stop überein', () => {
+  for (const profile of ['none', 'tr', 'tr-direct', 'manual', 'ing', 'ing-young']) {
+    const position = result({ costProfile: profile, extraFee: '2,90', buyFee: '2', sellFee: '3' });
+    assert.equal(calculateSaleScenario(position, position.targetCents).netGainCents, position.gainCents, profile);
+    assert.equal(calculateSaleScenario(position, position.stopCents).netGainCents, -position.lossCents, profile);
+    assert.ok(calculateSaleScenario(position, position.breakEvenCents).netGainCents >= 0n, profile);
+    assert.ok(calculateSaleScenario(position, position.netTargetCents).netGainCents >= 3n * position.lossCents, profile);
+  }
+});
+test('Schritt 3: manuelle Gesamtkosten werden nicht doppelt abgezogen', () => {
+  const position = result({ costProfile: 'manual', buyFee: '2', sellFee: '3' });
+  const scenario = calculateSaleScenario(position, 6000n);
+  assert.equal(scenario.netGainCents, 37500n);
+  assert.equal(scenario.netProceedsCents - scenario.investedCents, 37500n);
+});
+test('Schritt 3: ING-Deckel und Handelsplatzbetrag gelten auch am Szenariokurs', () => {
+  const scenario = calculateSaleScenario(result({ costProfile: 'ing', extraFee: '2,90' }), 100000n);
+  assert.equal(scenario.shares, 30n);
+  assert.equal(scenario.sellFeeCents, 7280n);
+});
+test('Schritt 3: centgenaue Werte über der sicheren Number-Grenze', () => {
+  const position = result({ portfolio: '9007199254740993,01', risk: '1', entry: '1', stop: '0,99' });
+  const scenario = calculateSaleScenario(position, 101n);
+  assert.equal(scenario.grossGainCents, position.shares);
+  assert.equal(scenario.netGainCents, position.shares);
+  assert.equal(scenario.saleValueCents, position.shares * 101n);
+});
+test('Schritt 3: ohne Aktien fallen keine fiktiven Orderkosten an', () => {
+  const position = result({ portfolio: '100', risk: '0,5', costProfile: 'tr' });
+  const scenario = calculateSaleScenario(position, 6000n);
+  assert.equal(scenario.netGainCents, 0n);
+  assert.equal(scenario.totalCostsCents, 0n);
+  assert.equal(evaluateSaleScenario('60', position).status, 'no-shares');
+});
+test('Schritt 3: optionale Validierung beeinflusst die Positionsberechnung nicht', () => {
+  const position = result({ costProfile: 'tr' });
+  for (const price of ['', ' ', '60,']) assert.equal(evaluateSaleScenario(price, position).status, 'incomplete');
+  for (const price of ['0', '-1', '60,001', 'NaN', 'Infinity']) {
+    const e = evaluateSaleScenario(price, position);
+    assert.equal(e.status, 'invalid');
+    assert.ok(e.message);
+    assert.equal(e.result, undefined);
+  }
+  assert.equal(evaluateSaleScenario('60', undefined).status, 'unavailable');
+  assert.equal(evaluateSaleScenario('60,00', position).result.netGainCents, 38800n);
+  assert.equal(evaluateSaleScenario('60.00', position).result.netGainCents, 38800n);
+  assert.equal(evaluate({ ...base, costProfile: 'tr', salePrice: 'invalid' }).result.shares, 39n);
+});
+test('Schritt 3: reine Berechnung lehnt ungültige direkte Aufrufe ab', () => {
+  const position = result({ costProfile: 'tr' });
+  for (const value of [0n, -1n, 6000, undefined]) assert.throws(() => calculateSaleScenario(position, value), RangeError);
+  for (const patch of [{ shares: -1n }, { shares: 1 }, { entryCents: 0n }, { buyFeeCents: -1n }]) assert.throws(() => calculateSaleScenario({ ...position, ...patch }, 6000n), RangeError);
+});
+test('Schritt 3 verändert weder Aktienzahl noch das Positionsobjekt', () => {
+  const position = result({ costProfile: 'tr' });
+  Object.freeze(position.costs);
+  Object.freeze(position);
+  const high = calculateSaleScenario(position, 6000n);
+  const low = calculateSaleScenario(position, 4000n);
+  assert.equal(high.shares, 39n);
+  assert.equal(low.shares, 39n);
+  assert.equal(position.gainCents, 29050n);
+  assert.equal(position.targetCents, 5750n);
 });

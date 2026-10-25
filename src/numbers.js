@@ -54,8 +54,14 @@
     const absolute = numerator < 0n ? -numerator : numerator;
     return (numerator < 0n ? '−' : '') + formatFixed((absolute * 100n + denominator / 2n) / denominator) + ' : 1';
   }
+  function formatSignedPercent(numerator, denominator) {
+    const absolute = numerator < 0n ? -numerator : numerator;
+    const rounded = percentHundredths(absolute, denominator);
+    const sign = rounded === 0n ? '' : numerator < 0n ? '−' : '+';
+    return sign + formatFixed(rounded) + '\u00a0%';
+  }
 
-  const api = { parseDecimal, parseMoney, formatInteger, formatMoney, formatPercent, percentHundredths, formatRatio };
+  const api = { parseDecimal, parseMoney, formatInteger, formatMoney, formatPercent, percentHundredths, formatRatio, formatSignedPercent };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PositionNumbers = api;
 })(typeof globalThis === 'object' ? globalThis : this);
